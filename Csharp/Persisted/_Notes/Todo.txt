@@ -1,0 +1,85 @@
+﻿
+NEXT TODOS:
+
+Issue of Size of container - block count is not good especially for strings
+
+StringSchema class needs polishing
+
+Simplify TableContainer (single method for StartRead and StartWrite deals with the wait?)
+
+Thorough test of random access in all types of tuples 
+
+insert line breaks even under windows
+
+
+MORE Schema types to do:
+
+- Bounded size strings (inlined into primary storage, faster access)
+- Nullable types
+- Arbitrary objects
+- Dates, Decimal, char, etc.
+
+
+Table of tuples
+Typed.Storage
+
+Multiple caches implementation - factory chooses based on type / capacity
+Prepare interfaces for decoupling encoding from schema in Persisted.Type
+
+Then move up in the stack - cached well typed stuff and then data structures
+
+OTHER STUFF
+
+Careful with the question: how do types compose
+
+when we have this 
+
+            var logs = workspace["logs"].Dictionary<
+                Workspace.String, 
+                Workspace.List<Workspace.String>>();
+
+and then do logs["Hello"]
+
+is it obvious how the LOGS list allocates a workspace for the corresponding key under its own directory?
+
+THOUGHTS
+
+Nesting: work out fully list<list> 
+
+unit testing/ milestone / cleaning
+
+garbage collection / reference counting
+
+word out the comparison with 
+- DB NoSQL, SQL,
+- binary serialization
+- Stored dictionary (app dev), distributed dictionary
+(Data structures, no wall, querying = programming)
+
+decouple per collection cache / global deprecation list
+
+other formats: consider JSON, BSON. 
+
+other targets: Azure Blobs
+
+other collections: Dictionary, queue, stack, SortedList, SortedDictionary 
+
+Add support for custom extensibility - objects encoded into Base 64
+
+Improve support for Inline and 
+
+Simple annotation mechanism 
+
+Robustness
+
+Asynchrony
+
+Map Reduce 
+
+* Improve reusability of buffers in all Stream classes (ByteStreamWriter and ByteStreamReader should be allocated once)
+
+* Streaming reads and writes 
+
+  starting from Storage methods that return say IEnumerable<T[]> 
+
+* Storage on fixed number of files (each file or blocks that are sY x MODULE 8)

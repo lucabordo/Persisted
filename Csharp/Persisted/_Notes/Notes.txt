@@ -1,0 +1,49 @@
+﻿The envisioned experience is:
+
+            var workspace = Workspace.Open(@"..\MyWorkspaces\Today\Cs\");
+            var logs = workspace["logs"].Dictionary<
+                Workspace.String, 
+                Workspace.List<Workspace.String>>();
+
+            // ideally - accessing a key or index creates an anonymous entry ...
+            // for list indexer is allowed at existing position or at last + 1 in which case creation
+            logs["Hello"].Add("World");
+
+            // otherwise 
+            logs.Add("Hello", workspace.List["logs/Hello"]<Persisted.String>();
+
+F5
+Close Visual Studio.
+Reopen.
+Data is still there!
+
+ 
+Now I happen to have a 10Gb data structure from my last session 
+-          Let’s run an algorithm on this
+
+ 
+Messages:
+
+Transparent persistence [Programming experience]
+
+-          We are in fact accessing persisted data  - as I they were in-memory – no wall between CLR heap and the storage
+
+-          True for directory structure and for data 
+
+-          Versionable, etc.
+
+ 
+Efficient [Algorithms / data-structures]
+
+-          It can’t be that Persisted.DataStructures are just deserialized when we need them
+
+-          My memory is a cache for storage – a bounded number of chunks is loaded / unloaded lazily
+
+-          Still preserves the properties of List / Dictionary / Queue (with some overhead of course, but reasonable)
+
+-          And allows Map-Reduce queries 
+
+ 
+An encoding of familiar, composable collection types into file system
+
+Libraries that map that

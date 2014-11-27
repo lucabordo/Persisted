@@ -1,0 +1,54 @@
+﻿    #region Design Notes
+
+    // DESIGN NOTES
+    // 
+    // (1) Blocks
+    //
+    // We use storage by fixed-size blocks here, i.e. rather than accessing each container at random positions
+    // this low-level storage is mandated to give access to blocks whose size is determined once and forall 
+    // when the block is first created. Write operations are also by block.
+    //
+    // Reasons:
+    //
+    // - Blocks should make it easier / more efficient to deal with asynchronous / concurrent access:
+    //   we can have one lock per block if needed - things would be more complicated with arbitrary positions.
+    // - Blocks allow predictive asynchronous block loading, i.e. when requested to deliver a certain block 
+    //   the storage may anticipate that the next block is likely to be requested next in many cases.
+    // - It allows "sharded" storage where the blocks are actually split across different files or containers.
+    //   The hope, to be evaluated, is that this reduces pressure on a single file and may improve performance.
+    //
+    // One thing that is awkward with fixed-sized blocks is that the last block of any collection will
+    // in general have entries that just have default values - 
+    // just like unaccessed positions in a resizable array are defaulted. 
+    // 
+    // (2) Async
+    // 
+    // Both read and write operations are async. 
+    // In many cases the top APIs will in fact be synchronous and wait for the read or write tasks.
+    // However behind the scenes the low-level use of async reads and writes allows at least for more
+    // optimized things to happen.
+    //
+    // (3) Reusable buffers:
+    //
+    // The low-level storage does not allocate arrays, especially for read operations, 
+    // rather it writes into an array allocated by the user and reused if appropriate. 
+    // This is to match closely with the type of optimization allowed by APIs such as FileStream.Read.
+	//
+	// (4) Read/Write
+	// 
+	// The storage class couples a read and write view on each container, 
+	// 
+
+    #endregion
+
+    #region Naming
+
+    // Storage:    The main object through which a specific storage provider is handled, 
+    //             represents for instance the local file system, a SQL database
+    // Container:  A collection of blocks of elements of a certain types, persisted in a storage
+	//             These are read and written by blocks, asynchronously 
+    // Block:      An array of elements. All blocks within a container have the same size
+    // Table:      A collection of blocks 
+	//             These are read and written individually and synchronously 
+
+    #endregion
