@@ -42,6 +42,7 @@
     <Compile Include="Layer00.Bytes\ByteContainer.cs" />
     <Compile Include="Layer00.Bytes\Identifier.cs" />
     <Compile Include="Layer00.Bytes\LocalFileStorage.cs" />
+    <Compile Include="Layer01.Typed\InlineArray.cs" />
     <Compile Include="Layer01.Typed\StringSchemas.cs" />
     <Compile Include="Layer01.Typed\Encoding.cs" />
     <Compile Include="Layer01.Typed\Table.cs" />
@@ -60,6 +61,7 @@
   <ItemGroup>
     <Content Include="Layer00.Bytes\notes.txt" />
     <Content Include="_Notes\Notes.txt" />
+    <Content Include="_Notes\Structure.txt" />
     <Content Include="_Notes\Todo.txt" />
   </ItemGroup>
   <ItemGroup>
