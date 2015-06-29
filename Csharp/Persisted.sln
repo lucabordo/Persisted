@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.22823.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persisted", "Persisted\Persisted.csproj", "{D2B0DF66-5FE2-48DD-B1D8-C37C334BD35B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersistedTests", "PersistedTests\PersistedTests.csproj", "{5A90628F-0B72-4256-836D-2F9D8A46672B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pickling", "Pickling\Pickling.csproj", "{A2B99328-F3E9-406E-8D67-DE6985BEB216}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pickling.Test", "Pickling.Test\Pickling.Test.csproj", "{3A7A1EB6-56ED-4C14-8755-0C5AAC4D9E9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{5A90628F-0B72-4256-836D-2F9D8A46672B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A90628F-0B72-4256-836D-2F9D8A46672B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A90628F-0B72-4256-836D-2F9D8A46672B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2B99328-F3E9-406E-8D67-DE6985BEB216}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2B99328-F3E9-406E-8D67-DE6985BEB216}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2B99328-F3E9-406E-8D67-DE6985BEB216}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2B99328-F3E9-406E-8D67-DE6985BEB216}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A7A1EB6-56ED-4C14-8755-0C5AAC4D9E9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A7A1EB6-56ED-4C14-8755-0C5AAC4D9E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A7A1EB6-56ED-4C14-8755-0C5AAC4D9E9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A7A1EB6-56ED-4C14-8755-0C5AAC4D9E9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
