@@ -1,6 +1,6 @@
 ﻿using Common;
 
-namespace Pickling
+namespace Common
 {
     /// <summary>
     /// A collection of bytes indexed by consecutive, long non-negative integers.

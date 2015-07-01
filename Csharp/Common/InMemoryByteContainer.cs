@@ -1,7 +1,7 @@
 ﻿using System;
 using Common;
 
-namespace Pickling
+namespace Common
 {
     /// <summary>
     /// A simple container whose storage is a simple, resizable in-memory array.

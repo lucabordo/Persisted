@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Common;
 
@@ -8,6 +9,8 @@ namespace Common.Test
     [TestClass]
     public class UnitTests
     {
+        #region ByteBuffer
+
         [TestMethod]
         public void TestByteBufferBasics()
         {
@@ -146,5 +149,189 @@ namespace Common.Test
             var read = buffer.GetReadView(5, 20);
             read.Read(read.Count, other, 10, 2);
         }
+
+        #endregion
+
+        #region Cache
+
+        [TestMethod]
+        public void TestGenericCache1()
+        {
+            var evictions = new List<int>();
+            var cache = new Cache<int, int>(
+                5,
+                x => x,
+                (x, _) => evictions.Add(x));
+
+            {
+                int i = cache[0];
+                Assert.AreEqual(0, i);
+            }
+            // 0
+
+            {
+                int i = cache[0];
+                Assert.AreEqual(0, i);
+            }
+            // 0
+
+            {
+                int i = cache[1];
+                Assert.AreEqual(1, i);
+            }
+            // 10
+
+            {
+                int i = cache[1];
+                Assert.AreEqual(1, i);
+            }
+            // 10
+
+            {
+                int i = cache[0];
+                Assert.AreEqual(0, i);
+            }
+            // 01
+
+            {
+                int i = cache[1];
+                Assert.AreEqual(1, i);
+            }
+            // 10
+
+            {
+                int i = cache[2];
+                Assert.AreEqual(2, i);
+            }
+            // 210
+
+            {
+                int i = cache[3];
+                Assert.AreEqual(3, i);
+            }
+            // 3210
+
+            {
+                int i = cache[4];
+                Assert.AreEqual(4, i);
+            }
+            // 43210
+
+            {
+                int i = cache[0];
+                Assert.AreEqual(0, i);
+            }
+            // 04321
+
+            {
+                int i = cache[1];
+                Assert.AreEqual(1, i);
+            }
+            // 10432
+
+
+            Assert.AreEqual(0, evictions.Count);
+
+            {
+                int i = cache[7];
+                Assert.AreEqual(7, i);
+            }
+            // 71043
+
+            Assert.AreEqual(1, evictions.Count);
+            Assert.AreEqual(2, evictions[0]);
+
+            {
+                int i = cache[8];
+                Assert.AreEqual(8, i);
+            }
+            // 87104
+
+            Assert.AreEqual(2, evictions.Count);
+            Assert.AreEqual(3, evictions[1]);
+
+            {
+                int i = cache[1];
+                Assert.AreEqual(1, i);
+            }
+            // 18704
+
+            Assert.AreEqual(2, evictions.Count);
+            Assert.AreEqual(3, evictions[1]);
+
+            {
+                int i = cache[9];
+                Assert.AreEqual(9, i);
+            }
+            // 91870
+
+            Assert.AreEqual(3, evictions.Count);
+            Assert.AreEqual(4, evictions[2]);
+
+            {
+                int i = cache[0];
+                Assert.AreEqual(0, i);
+            }
+            // 09187
+
+            Assert.AreEqual(3, evictions.Count);
+            Assert.AreEqual(4, evictions[2]);
+
+            {
+                int i = cache[4];
+                Assert.AreEqual(4, i);
+            }
+            // 40918
+
+            Assert.AreEqual(4, evictions.Count);
+            Assert.AreEqual(7, evictions[3]);
+
+            {
+                int i = cache[8];
+                Assert.AreEqual(8, i);
+            }
+            // 84091
+
+            Assert.AreEqual(4, evictions.Count);
+            Assert.AreEqual(7, evictions[3]);
+
+            {
+                int i = cache[5];
+                Assert.AreEqual(5, i);
+            }
+            // 58409
+
+            Assert.AreEqual(5, evictions.Count);
+            Assert.AreEqual(1, evictions[4]);
+
+            {
+                int i = cache[6];
+                Assert.AreEqual(6, i);
+            }
+            // 65840
+
+            Assert.AreEqual(6, evictions.Count);
+            Assert.AreEqual(9, evictions[5]);
+        }
+
+        [TestMethod]
+        public void TestGenericCache2()
+        {
+            var prng = new Random(123);
+            var evictions = new List<int>();
+            var cache = new Cache<int, int>(
+                5,
+                x => x,
+                (x, _) => evictions.Add(x));
+
+            for (int i = 0; i < 10000; ++i)
+            {
+                var rand = prng.Next(20);
+                int next = cache[rand];
+                Assert.AreEqual(next, rand);
+            }
+        }
+
+        #endregion
     }
 }
