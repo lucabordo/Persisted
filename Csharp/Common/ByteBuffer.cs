@@ -4,33 +4,52 @@ using System.Diagnostics;
 namespace Common
 {
     /// <summary>
-    /// A byte buffer that provides read and write views. 
+    /// A reusable array of bytes that can offers read and write views.
     /// </summary>
     public class ByteBuffer
     {
-        private byte[] buffer_;
-        
-        public ByteSegmentReadView GetReadView(int start, int endExclusive)
-        {
-            return new ByteSegmentReadView(buffer_, start, endExclusive);
-        }
+        private byte[] buffer;
 
-        public ByteSegmentWriteView GetWriteView(int start, int endExclusive)
+        public ByteBuffer(int initializeSize = 128)
         {
-            return new ByteSegmentWriteView(buffer_, start, endExclusive);
+            buffer = new byte[initializeSize];
         }
 
         /// <summary>
-        /// Make sure the size is at least some required amount
+        /// Get the number of allocated bytes
+        /// </summary>
+        public int Capacity
+        {
+            get { return buffer.Length; }
+        }
+
+        /// <summary>
+        /// Get read access to a contiguous segment of the array
+        /// </summary>
+        public ByteSegmentReadView GetReadView(int start, int endExclusive)
+        {
+            return new ByteSegmentReadView(buffer, start, endExclusive);
+        }
+
+        /// <summary>
+        /// Get write access to a contiguous segment of the array
+        /// </summary>
+        public ByteSegmentWriteView GetWriteView(int start, int endExclusive)
+        {
+            return new ByteSegmentWriteView(buffer, start, endExclusive);
+        }
+
+        /// <summary>
+        /// Make sure the capacity is at least some required amount
         /// </summary>
         public void Resize(int requiredSize, bool ignoreContent = false)
         {
-            if (buffer_.Length < requiredSize)
+            if (buffer.Length < requiredSize)
             {
                 if (ignoreContent)
-                    buffer_ = new byte[requiredSize];
+                    buffer = new byte[requiredSize];
                 else
-                    Array.Resize(ref buffer_, requiredSize);
+                    Array.Resize(ref buffer, requiredSize);
             }
         }
     }
