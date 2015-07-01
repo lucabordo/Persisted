@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Common;
+using System.IO;
 
 namespace Common.Test
 {
@@ -329,6 +329,89 @@ namespace Common.Test
                 var rand = prng.Next(20);
                 int next = cache[rand];
                 Assert.AreEqual(next, rand);
+            }
+        }
+
+        #endregion
+
+        #region Encoding
+
+        [TestMethod]
+        public void TestEncoding()
+        {
+            byte b1;
+            byte b2;
+
+            Converter16.ToBytes('k', out b1, out b2);
+            Assert.AreEqual('k', Converter16.FromBytes(b1, b2));
+
+            var bytes = new byte[6];
+            Converter16.ToBytes((char)'A', out bytes[0], out bytes[1]);
+            Converter16.ToBytes((char)UInt16.MaxValue, out bytes[2], out bytes[3]);
+            Converter16.ToBytes((char)'9', out bytes[4], out bytes[5]);
+
+            var path = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllBytes(path, bytes);
+
+                using (var stream = new StreamReader(path, System.Text.Encoding.Unicode))
+                {
+                    var l = stream.ReadLine();
+                    Assert.AreEqual('A', l[0]);
+                    Assert.AreEqual('9', l[2]);
+                }
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestMethod]
+        public void TestConversions1()
+        {
+            foreach (var x in new[] { -1.034e32, 0.467, 1239.033, 0, double.MinValue, double.MaxValue, double.NegativeInfinity, double.PositiveInfinity, double.NaN })
+            {
+                var binary = Converter64.LongFromDouble(x);
+                var back = Converter64.DoubleFromLong(binary);
+                Assert.AreEqual(x, back);
+            }
+
+            foreach (var x in new[] { DateTime.Now, DateTime.MinValue, DateTime.MaxValue })
+            {
+                var binary = Converter64.LongFromDateTime(x);
+                var back = Converter64.DateTimeFromLong(binary);
+                Assert.AreEqual(x, back);
+            }
+
+            foreach (long value in new[] { 94775L, long.MinValue, long.MaxValue, 0L })
+            {
+                byte[] bytes = new byte[8];
+                {
+                    var converter = new Converter64();
+                    converter.AsLong = value;
+                    bytes[0] = converter.Byte0;
+                    bytes[1] = converter.Byte1;
+                    bytes[2] = converter.Byte2;
+                    bytes[3] = converter.Byte3;
+                    bytes[4] = converter.Byte4;
+                    bytes[5] = converter.Byte5;
+                    bytes[6] = converter.Byte6;
+                    bytes[7] = converter.Byte7;
+                }
+                {
+                    var converter = new Converter64();
+                    converter.Byte0 = bytes[0];
+                    converter.Byte1 = bytes[1];
+                    converter.Byte2 = bytes[2];
+                    converter.Byte3 = bytes[3];
+                    converter.Byte4 = bytes[4];
+                    converter.Byte5 = bytes[5];
+                    converter.Byte6 = bytes[6];
+                    converter.Byte7 = bytes[7];
+                    Assert.AreEqual(value, converter.AsLong);
+                }
             }
         }
 
