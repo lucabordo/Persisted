@@ -1,5 +1,10 @@
-﻿using System.Text;
-using Common;
+﻿using Common;
+
+#if USE_READABLE_ENCODING 
+    using Encoding = Pickling.ReadableEncoding;
+#else
+    using Encoding = Pickling.ReadableEncoding;
+#endif
 
 namespace Pickling
 {
