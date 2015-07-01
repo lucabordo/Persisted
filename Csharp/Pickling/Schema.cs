@@ -1,10 +1,12 @@
 ﻿using System.Text;
+using Common;
 
 namespace Pickling
 {
     /// <summary>
     /// A schema for entries that can be stored in collections
     /// </summary>
+
     internal abstract class Schema<T>
     {
         #region Abstract Properties and methods 

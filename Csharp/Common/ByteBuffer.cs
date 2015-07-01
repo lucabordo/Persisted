@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Pickling
+namespace Common
 {
-    // TODO
-    // This is all Common, nothing specific to Pickling
-
+    /// <summary>
+    /// A byte buffer that provides read and write views. 
+    /// </summary>
     public class ByteBuffer
     {
         private byte[] buffer_;
@@ -55,7 +55,6 @@ namespace Pickling
 
         public ByteSegmentReadView Narrow(int startShift)
         {
-            // TODO rather than all these chacks to 0 enforce uint? 
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
             return new ByteSegmentReadView(buffer_, start_ + startShift, end_);
