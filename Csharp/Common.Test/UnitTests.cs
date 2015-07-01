@@ -337,7 +337,7 @@ namespace Common.Test
         #region Encoding
 
         [TestMethod]
-        public void TestEncoding()
+        public void TestConversions1()
         {
             byte b1;
             byte b2;
@@ -369,7 +369,7 @@ namespace Common.Test
         }
 
         [TestMethod]
-        public void TestConversions1()
+        public void TestConversions2()
         {
             foreach (var x in new[] { -1.034e32, 0.467, 1239.033, 0, double.MinValue, double.MaxValue, double.NegativeInfinity, double.PositiveInfinity, double.NaN })
             {
