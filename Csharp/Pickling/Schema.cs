@@ -1,5 +1,6 @@
 ﻿using Common;
 
+// Remove this 
 #if USE_READABLE_ENCODING 
     using Encoding = Pickling.ReadableEncoding;
 #else
@@ -19,22 +20,22 @@ namespace Pickling
         /// <summary>
         /// Number of bytes of fixed-size storage used by any element
         /// </summary>
-        internal abstract int GetFixedSize(Encoding encoding);
+        internal abstract int GetFixedSize();
 
         /// <summary>
         /// Number of bytes of dynamic-size storage used by a specific element
         /// </summary>
-        internal abstract int GetDynamicSize(Encoding encoding, T element);
+        internal abstract int GetDynamicSize(T element);
 
         /// <summary>
         /// Extract an element of the corresponding type from a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract T Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage, Encoding encoding, ref long position);
+        internal abstract T Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage, ref long position);
 
         /// <summary>
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Encoding encoding, ref long position, T element);
+        internal abstract void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, ref long position, T element);
 
         #endregion
     }
