@@ -58,7 +58,7 @@ namespace Common
     /// <summary>
     /// A read-only view on a segment of byte array.
     /// </summary>
-    public struct ByteSegmentReadView
+    public class ByteSegmentReadView
     {
         private byte[] buffer_;
         private int start_;
@@ -72,11 +72,11 @@ namespace Common
             end_ = endExclusive;
         }
 
-        public ByteSegmentReadView Narrow(int startShift)
+        public void Narrow(int startShift)
         {
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
-            return new ByteSegmentReadView(buffer_, start_ + startShift, end_);
+            start_ += startShift;
         }
 
         public int Count
@@ -109,7 +109,7 @@ namespace Common
     /// <summary>
     /// A write-only view on a segment of byte array.
     /// </summary>
-    public struct ByteSegmentWriteView
+    public class ByteSegmentWriteView
     {
         private byte[] buffer_;
         private int start_;
@@ -123,11 +123,11 @@ namespace Common
             end_ = endExclusive;
         }
 
-        public ByteSegmentWriteView Narrow(int startShift)
+        public void Narrow(int startShift)
         {
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
-            return new ByteSegmentWriteView(buffer_, start_ + startShift, end_);
+            start_ += startShift;
         }
 
         public int Count
