@@ -38,30 +38,26 @@ namespace Pickling
         #endregion
 
         #region Read and Write numbers
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte ReadByte(ByteSegmentReadView source, ref int position)
+        
+        public static byte ReadByte(ByteSegmentReadView source)
         {
-            long result = ReadIntegralType(source, CharCountForByte, ref position);
+            long result = ReadIntegralType(source, CharCountForByte);
             return (byte)result;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ReadInt(ByteSegmentReadView source, ref int position)
+        
+        public static int ReadInt(ByteSegmentReadView source)
         {
-            long result = ReadIntegralType(source, CharCountForInt, ref position);
+            long result = ReadIntegralType(source, CharCountForInt);
             return (int)result;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long ReadLong(ByteSegmentReadView source, ref int position)
+        
+        public static long ReadLong(ByteSegmentReadView source)
         {
-            long result = ReadIntegralType(source, CharCountForLong, ref position);
+            long result = ReadIntegralType(source, CharCountForLong);
             return result;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long ReadIntegralType(ByteSegmentReadView source, int digits, ref int position)
+        
+        private static long ReadIntegralType(ByteSegmentReadView source, int digits)
         {
             Debug.Assert(-long.MaxValue == long.MinValue + 1);
             // Note that we are assuming the following min and max values 
@@ -70,26 +66,17 @@ namespace Pickling
             // We have more negative values than positive ones. 
             // To read -9223372036854775808 correctly we need to read everything negated
 
-            long minusResults = 0;
-            bool negative = false;
-            int i = 1;
-
             // Possible '-' sign at start
-            var first = ReadChar(source, ref position);
+            int i = 1;
+            var first = ReadChar(source);
 
-            if (first == '-')
-            {
-                negative = true;
-            }
-            else
-            {
-                minusResults = -ToInt(first);
-            }
+            bool negative = (first == '-');
+            long minusResults = negative ? 0 : -ToInt(first);
 
             // digits 
             for (; i < digits; ++i)
             {
-                char next = ReadChar(source, ref position);
+                char next = ReadChar(source);
 
                 if (next == ' ')
                 {
@@ -104,7 +91,7 @@ namespace Pickling
             // remaining spaces
             for (++i; i < digits; ++i)
             {
-                if (ReadChar(source, ref position) != ' ')
+                if (ReadChar(source) != ' ')
                 {
                     throw new Exception();
                 }
@@ -112,26 +99,23 @@ namespace Pickling
 
             return negative ? minusResults : (-minusResults);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteByte(ByteSegmentWriteView target, ref int position, byte value)
+        
+        public static void WriteByte(ByteSegmentWriteView target, byte value)
         {
-            WriteIntegralType(target, ref position, value, CharCountForByte);
+            WriteIntegralType(target, value, CharCountForByte);
+        }
+        
+        public static void WriteInt(ByteSegmentWriteView target, int value)
+        {
+            WriteIntegralType(target, value, CharCountForInt);
+        }
+        
+        public static void WriteLong(ByteSegmentWriteView target, long value)
+        {
+            WriteIntegralType(target, value, CharCountForLong);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt(ByteSegmentWriteView target, ref int position, int value)
-        {
-            WriteIntegralType(target, ref position, value, CharCountForInt);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteLong(ByteSegmentWriteView target, ref int position, long value)
-        {
-            WriteIntegralType(target, ref position, value, CharCountForLong);
-        }
-
-        private static void WriteIntegralType(ByteSegmentWriteView target, ref int position, long value, int digits)
+        private static void WriteIntegralType(ByteSegmentWriteView target, long value, int digits)
         {
             Debug.Assert(-long.MaxValue == long.MinValue + 1);
             bool negative = value < 0;
@@ -139,16 +123,16 @@ namespace Pickling
 
             // Write the digits backwards, making sure to insert one digit if the value is 0
 
+            var converter = new Converter16('0');
             if (value == 0)
             {
-                var converter = new Converter16('0');
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
 
             for (long v = negative ? value : -value; v != 0; v /= 10)
             {
-                var converter = new Converter16(ToChar(-(v % 10)));
+                converter = new Converter16(ToChar(-(v % 10)));
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
@@ -157,19 +141,19 @@ namespace Pickling
 
             if (negative)
             {
-                var converter = new Converter16('-');
+                converter = new Converter16('-');
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
 
+            converter = new Converter16(' ');
             while (byteId != 0)
             {
-                var converter = new Converter16(' ');
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
 
-            position += 2 * digits;
+            target.MoveForward(2 * digits);
         }
 
         #endregion
@@ -177,99 +161,99 @@ namespace Pickling
         #region Read and write references
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static long ReadReference(ByteSegmentReadView source, ref int position)
+        internal static long ReadReference(ByteSegmentReadView source)
         {
-            SkipReferenceHeader(source, ref position);
-            return ReadLong(source, ref position);
+            SkipReferenceHeader(source);
+            return ReadLong(source);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void WriteReference(ByteSegmentWriteView target, ref int position, long value)
+        internal static void WriteReference(ByteSegmentWriteView target, long value)
         {
-            WriteReferenceHeader(target, ref position);
-            WriteLong(target, ref position, value);
+            WriteReferenceHeader(target);
+            WriteLong(target, value);
         }
 
         #endregion
 
         #region Read and Write characters
 
-        public static string ReadString(ByteSegmentReadView source, ref int position, int length, ref char[] charBuffer)
+        public static string ReadString(ByteSegmentReadView source, int length, ref char[] charBuffer)
         {
             while (charBuffer.Length < length)
                 charBuffer = new char[charBuffer.Length * 2];
             for (int i = 0; i < length; ++i)
-                charBuffer[i] = ReadChar(source, ref position);
+                charBuffer[i] = ReadChar(source);
             return new string(charBuffer, 0, length);
         }
 
-        public static void WriteString(ByteSegmentWriteView writer, string value, ref int position)
+        public static void WriteString(ByteSegmentWriteView writer, string value)
         {
             foreach (char c in value)
-                WriteChar(writer, c, ref position);
+                WriteChar(writer, c);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipExpectedCharacter(ByteSegmentReadView source, char expectedChar, ref int position)
+        public static void SkipExpectedCharacter(ByteSegmentReadView source, char expectedChar)
         {
-            var nextChar = ReadChar(source, ref position);
+            var nextChar = ReadChar(source);
             if (nextChar != expectedChar)
                 throw new Exception();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static char ReadChar(ByteSegmentReadView source, ref int position)
+        public static char ReadChar(ByteSegmentReadView source)
         {
-            var byte1 = source[position++];
-            var byte2 = source[position++];
+            var byte1 = source.NextChar;
+            var byte2 = source.NextChar;
             var converter = new Converter16(byte1, byte2);
             return converter.AsChar;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteChar(ByteSegmentWriteView writer, char c, ref int position)
+        public static void WriteChar(ByteSegmentWriteView writer, char c)
         {
             var converter = new Converter16(c);
-            writer[position++] = converter.Byte0;
-            writer[position++] = converter.Byte1;
+            writer.NextChar = converter.Byte0;
+            writer.NextChar = converter.Byte1;
         }
 
         /// <summary>
         /// Insert a separator between the encoding of two properties of a object 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WritePropertySeparator(ByteSegmentWriteView writer, ref int position)
+        public static void WritePropertySeparator(ByteSegmentWriteView writer)
         {
-            WriteChar(writer, ElementSeparator, ref position);
+            WriteChar(writer, ElementSeparator);
         }
 
         /// <summary>
         /// Read and skip an expected separator used between the encoding of two properties of a object 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipPropertySeparator(ByteSegmentReadView source, ref int position)
+        public static void SkipPropertySeparator(ByteSegmentReadView source)
         {
-            SkipExpectedCharacter(source, ElementSeparator, ref position);
+            SkipExpectedCharacter(source, ElementSeparator);
         }
 
         /// <summary>
         /// Insert a separator between the encodings of two objects
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteObjectSeparator(ByteSegmentWriteView writer, ref int position)
+        public static void WriteObjectSeparator(ByteSegmentWriteView writer)
         {
-            writer[position++] = (byte)'\r';
-            writer[position++] = (byte)'\n';
+            writer.NextChar = (byte)'\r';
+            writer.NextChar = (byte)'\n';
         }
 
         /// <summary>
         /// Read and skip an expected separator between the encodings of two objects
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipObjectSeparator(ByteSegmentReadView source, ref int position)
+        public static void SkipObjectSeparator(ByteSegmentReadView source)
         {
-            char c1 = (char)source[position++];
-            char c2 = (char)source[position++];
+            char c1 = (char)source.NextChar;
+            char c2 = (char)source.NextChar;
 
             if (c1 != '\r' || c2 != '\n')
                 throw new Exception();
@@ -279,18 +263,18 @@ namespace Pickling
         /// Insert a header character in front of a reference
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteReferenceHeader(ByteSegmentWriteView writer, ref int position)
+        public static void WriteReferenceHeader(ByteSegmentWriteView writer)
         {
-            WriteChar(writer, ReferenceHeader, ref position);
+            WriteChar(writer, ReferenceHeader);
         }
 
         /// <summary>
         /// Read and skip an expected header character in front of a reference
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipReferenceHeader(ByteSegmentReadView source, ref int position)
+        public static void SkipReferenceHeader(ByteSegmentReadView source)
         {
-            SkipExpectedCharacter(source, ReferenceHeader, ref position);
+            SkipExpectedCharacter(source, ReferenceHeader);
         }
 
         #endregion

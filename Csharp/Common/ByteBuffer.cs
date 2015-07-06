@@ -72,7 +72,7 @@ namespace Common
             end_ = endExclusive;
         }
 
-        public void Narrow(int startShift)
+        public void MoveForward(int startShift)
         {
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
@@ -82,6 +82,11 @@ namespace Common
         public int Count
         {
             get { return end_ - start_; }
+        }
+
+        public byte NextChar
+        {
+            get { return buffer_[start_++]; }
         }
 
         public byte this[int index]
@@ -123,7 +128,7 @@ namespace Common
             end_ = endExclusive;
         }
 
-        public void Narrow(int startShift)
+        public void MoveForward(int startShift)
         {
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
@@ -133,6 +138,11 @@ namespace Common
         public int Count
         {
             get { return end_ - start_; }
+        }
+
+        public byte NextChar
+        {
+            set { buffer_[start_++] = value; }
         }
 
         public byte this[int index]
