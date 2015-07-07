@@ -1,5 +1,7 @@
 ﻿using Common;
 using System;
+using System.Diagnostics;
+using System.Diagnostics.Contracts;
 
 namespace Pickling
 {
@@ -84,6 +86,18 @@ namespace Pickling
         }
 
         #endregion
+
+        #region Arrays
+
+        /// <summary>
+        /// Create a Schema component for arrays of a certain (serializable) type
+        /// </summary>
+        public static Schema<T[]> Array<T>(Schema<T> s)
+        {
+            return new InlineArray<T>(s);
+        }
+
+        #endregion
     }
 
 
@@ -113,6 +127,25 @@ namespace Pickling
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
         internal abstract void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element);
+
+        #endregion
+
+        #region Contracts
+
+        [Conditional("DEBUG")]
+        protected void WritePreconditions(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element)
+        {
+            Contract.Requires(fixedStorage.Count == GetFixedSize());
+            Contract.Requires(dynamicStorage.Count == GetDynamicSize(element));
+            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
+        }
+
+        [Conditional("DEBUG")]
+        protected void ReadPreconditions(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        {
+            Contract.Requires(fixedStorage.Count == GetFixedSize());;
+            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
+        }
 
         #endregion
     }
