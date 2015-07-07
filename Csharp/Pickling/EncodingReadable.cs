@@ -15,30 +15,16 @@ namespace Pickling
     /// </remarks>
     internal static class ReadableEncoding
     {
-        #region Constants and fields
+        #region Read and Write numbers
 
-        internal const char ElementSeparator = ',';
-        internal const string EndOfTuple = "\r\n";
-        internal const char ReferenceHeader = '@';
-
-        // Number of characters in the representation of basic value types
         private static readonly int CharCountForByte = byte.MaxValue.ToString().Length;
         private static readonly int CharCountForInt = int.MinValue.ToString().Length;
         private static readonly int CharCountForLong = long.MinValue.ToString().Length;
 
-        // number of bytes in the encoding of basic value types
-        public static readonly int EncodingSizeForByte = 2 * byte.MaxValue.ToString().Length;
-        public static readonly int EncodingSizeForInt = 2 * int.MinValue.ToString().Length;
-        public static readonly int EncodingSizeForLong = 2 * long.MinValue.ToString().Length;
+        public static readonly int EncodingSizeForByte = 2 * CharCountForByte;
+        public static readonly int EncodingSizeForInt = 2 * CharCountForInt;
+        public static readonly int EncodingSizeForLong = 2 * CharCountForLong;
 
-        public static readonly int EncodingSizeForReservedChar = 2;
-        public static readonly int EncodingSizeForSeparator = 2;
-        public static readonly int EncodingSizeForEndOfTuple = 4;
-
-        #endregion
-
-        #region Read and Write numbers
-        
         public static byte ReadByte(ByteSegmentReadView source)
         {
             long result = ReadIntegralType(source, CharCountForByte);
@@ -56,7 +42,22 @@ namespace Pickling
             long result = ReadIntegralType(source, CharCountForLong);
             return result;
         }
-        
+
+        public static void WriteByte(ByteSegmentWriteView target, byte value)
+        {
+            WriteIntegralType(target, value, CharCountForByte);
+        }
+
+        public static void WriteInt(ByteSegmentWriteView target, int value)
+        {
+            WriteIntegralType(target, value, CharCountForInt);
+        }
+
+        public static void WriteLong(ByteSegmentWriteView target, long value)
+        {
+            WriteIntegralType(target, value, CharCountForLong);
+        }
+
         private static long ReadIntegralType(ByteSegmentReadView source, int digits)
         {
             Debug.Assert(-long.MaxValue == long.MinValue + 1);
@@ -98,21 +99,6 @@ namespace Pickling
             }
 
             return negative ? minusResults : (-minusResults);
-        }
-        
-        public static void WriteByte(ByteSegmentWriteView target, byte value)
-        {
-            WriteIntegralType(target, value, CharCountForByte);
-        }
-        
-        public static void WriteInt(ByteSegmentWriteView target, int value)
-        {
-            WriteIntegralType(target, value, CharCountForInt);
-        }
-        
-        public static void WriteLong(ByteSegmentWriteView target, long value)
-        {
-            WriteIntegralType(target, value, CharCountForLong);
         }
 
         private static void WriteIntegralType(ByteSegmentWriteView target, long value, int digits)
@@ -158,25 +144,54 @@ namespace Pickling
 
         #endregion
 
-        #region Read and write references
+        #region Read and write offsets and references
+
+        internal const char ReferenceHeader = '*';
+        internal const char OffsetHeader = '@';
+        public static readonly int EncodingSizeForOffset = EncodingSizeForChar + EncodingSizeForInt;
+        public static readonly int EncodingSizeForReference = EncodingSizeForChar + EncodingSizeForLong;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static long ReadReference(ByteSegmentReadView source)
+        internal static int ReadOffset(ByteSegmentReadView reader)
         {
-            SkipReferenceHeader(source);
-            return ReadLong(source);
+            SkipExpectedCharacter(reader, OffsetHeader);
+            return ReadInt(reader);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void WriteReference(ByteSegmentWriteView target, long value)
+        internal static void WriteOffset(ByteSegmentWriteView writer, int value)
         {
-            WriteReferenceHeader(target);
-            WriteLong(target, value);
+            WriteChar(writer, OffsetHeader);
+            WriteInt(writer, value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static long ReadReference(ByteSegmentReadView reader)
+        {
+            SkipExpectedCharacter(reader, ReferenceHeader);
+            return ReadLong(reader);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void WriteReference(ByteSegmentWriteView writer, long value)
+        {
+            WriteChar(writer, ReferenceHeader);
+            WriteLong(writer, value);
         }
 
         #endregion
 
-        #region Read and Write characters
+        #region Read and Write strings
+
+        // TODO add some annotations - perhaps just "quotes"
+
+        /// <summary>
+        /// Size for encoding a string in dynamic storage
+        /// </summary>
+        public static int EncodingSizeForString(int stringLength)
+        {
+            return stringLength * EncodingSizeForChar;
+        }
 
         public static string ReadString(ByteSegmentReadView source, int length, ref char[] charBuffer)
         {
@@ -193,13 +208,11 @@ namespace Pickling
                 WriteChar(writer, c);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipExpectedCharacter(ByteSegmentReadView source, char expectedChar)
-        {
-            var nextChar = ReadChar(source);
-            if (nextChar != expectedChar)
-                throw new Exception();
-        }
+        #endregion
+
+        #region Read and write characters
+
+        public static readonly int EncodingSizeForChar = 2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static char ReadChar(ByteSegmentReadView source)
@@ -218,6 +231,21 @@ namespace Pickling
             writer.NextChar = converter.Byte1;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipExpectedCharacter(ByteSegmentReadView source, char expectedChar)
+        {
+            var nextChar = ReadChar(source);
+            if (nextChar != expectedChar)
+                throw new Exception();
+        }
+
+        #endregion
+
+        #region Read and write separators
+
+        public static readonly int EncodingSizeForElementSeparator = EncodingSizeForChar;
+        internal const char ElementSeparator = ',';
+
         /// <summary>
         /// Insert a separator between the encoding of two properties of a object 
         /// </summary>
@@ -235,6 +263,8 @@ namespace Pickling
         {
             SkipExpectedCharacter(source, ElementSeparator);
         }
+
+        public static readonly int EncodingSizeForObjectSeparator = 2 * EncodingSizeForChar;
 
         /// <summary>
         /// Insert a separator between the encodings of two objects
@@ -257,24 +287,6 @@ namespace Pickling
 
             if (c1 != '\r' || c2 != '\n')
                 throw new Exception();
-        }
-
-        /// <summary>
-        /// Insert a header character in front of a reference
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteReferenceHeader(ByteSegmentWriteView writer)
-        {
-            WriteChar(writer, ReferenceHeader);
-        }
-
-        /// <summary>
-        /// Read and skip an expected header character in front of a reference
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SkipReferenceHeader(ByteSegmentReadView source)
-        {
-            SkipExpectedCharacter(source, ReferenceHeader);
         }
 
         #endregion

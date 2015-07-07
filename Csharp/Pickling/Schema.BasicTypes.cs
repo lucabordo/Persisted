@@ -535,8 +535,8 @@ namespace Pickling
 
     static internal class TupleSchemaHelpers
     {
-        internal static int FixedSeparatorSize = Encoding.EncodingSizeForSeparator;
-        internal static int DynamicSeparatorSize = Encoding.EncodingSizeForSeparator;
+        internal static int FixedSeparatorSize = Encoding.EncodingSizeForElementSeparator;
+        internal static int DynamicSeparatorSize = Encoding.EncodingSizeForElementSeparator;
 
         internal static void WriteSeparator(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage)
         {
