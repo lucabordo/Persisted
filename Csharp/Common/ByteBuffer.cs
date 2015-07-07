@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Diagnostics.Contracts;
 
 namespace Common
 {
@@ -56,20 +56,59 @@ namespace Common
 
 
     /// <summary>
-    /// A read-only view on a segment of byte array.
+    /// A view on a segment of byte array
     /// </summary>
-    public class ByteSegmentReadView
+    public class ByteSegment
     {
-        private byte[] buffer_;
-        private int start_;
-        private int end_; // exclusive
+        protected byte[] buffer_;
+        protected int start_;
+        protected int end_; // exclusive
 
-        public ByteSegmentReadView(byte[] buffer, int start, int endExclusive)
+        internal ByteSegment(byte[] buffer, int start, int endExclusive)
         {
-            Debug.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
+            Contract.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
             buffer_ = buffer;
             start_ = start;
             end_ = endExclusive;
+        }
+
+        /// <summary>
+        /// True if two segments cover separate memory areas
+        /// </summary>
+        public bool Disjoint(ByteSegment other)
+        {
+            return !ReferenceEquals(buffer_, other.buffer_)
+                || start_ >= other.end_
+                || end_ <= other.start_;
+        }
+
+        /// <summary>
+        /// Number of bytes in the segment
+        /// </summary>
+        public int Count
+        {
+            get { return end_ - start_; }
+        }
+    }
+
+
+    /// <summary>
+    /// A read-only view on a segment of byte array.
+    /// </summary>
+    public class ByteSegmentReadView : ByteSegment
+    {
+        internal ByteSegmentReadView(byte[] buffer, int start, int endExclusive):
+            base(buffer, start, endExclusive)
+        {
+        }
+
+        public ByteSegmentReadView SubSegment(int startShift, int length)
+        {
+            if (startShift <= 0 || start_ + startShift + length >= end_)
+                throw new IndexOutOfRangeException();
+
+            int newStart = start_ + startShift;
+            return new ByteSegmentReadView(buffer_, newStart, newStart + length);
         }
 
         public void MoveForward(int startShift)
@@ -77,11 +116,6 @@ namespace Common
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
             start_ += startShift;
-        }
-
-        public int Count
-        {
-            get { return end_ - start_; }
         }
 
         public byte NextChar
@@ -114,18 +148,20 @@ namespace Common
     /// <summary>
     /// A write-only view on a segment of byte array.
     /// </summary>
-    public class ByteSegmentWriteView
+    public class ByteSegmentWriteView : ByteSegment
     {
-        private byte[] buffer_;
-        private int start_;
-        private int end_; // exclusive
-
-        public ByteSegmentWriteView(byte[] buffer, int start, int endExclusive)
+        internal ByteSegmentWriteView(byte[] buffer, int start, int endExclusive)
+            : base(buffer, start, endExclusive)
         {
-            Debug.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
-            buffer_ = buffer;
-            start_ = start;
-            end_ = endExclusive;
+        }
+
+        public ByteSegmentWriteView SubSegment(int startShift, int length)
+        {
+            if (startShift <= 0 || start_ + startShift + length >= end_)
+                throw new IndexOutOfRangeException();
+
+            int newStart = start_ + startShift;
+            return new ByteSegmentWriteView(buffer_, newStart, newStart + length);
         }
 
         public void MoveForward(int startShift)
@@ -133,11 +169,6 @@ namespace Common
             if (startShift < 0)
                 throw new IndexOutOfRangeException();
             start_ += startShift;
-        }
-
-        public int Count
-        {
-            get { return end_ - start_; }
         }
 
         public byte NextChar
