@@ -58,6 +58,11 @@ namespace Common
     /// <summary>
     /// A view on a segment of byte array
     /// </summary>
+    /// <remarks>
+    /// These are conceptually structs, but are modified by callers (stream behaviour)
+    /// and should then be passed by ref. Instead we use references. 
+    /// We simply avoid reallocating. 
+    /// </remarks>
     public class ByteSegment
     {
         protected byte[] buffer_;
@@ -102,9 +107,17 @@ namespace Common
         {
         }
 
+        internal void SetAsSubSegmentFrom(ByteSegmentReadView other, int startShift, int length)
+        {
+            Contract.Requires(startShift >= 0 && start_ + startShift + length <= end_);
+            buffer_ = other.buffer_;
+            start_ = other.start_ + startShift;
+            end_ = start_ + length;
+        }
+
         public ByteSegmentReadView SubSegment(int startShift, int length)
         {
-            if (startShift <= 0 || start_ + startShift + length >= end_)
+            if (startShift < 0 || start_ + startShift + length >= end_)
                 throw new IndexOutOfRangeException();
 
             int newStart = start_ + startShift;
@@ -155,9 +168,17 @@ namespace Common
         {
         }
 
+        internal void SetAsSubSegmentFrom(ByteSegmentWriteView other, int startShift, int length)
+        {
+            Contract.Requires(startShift >= 0 && start_ + startShift + length <= end_);
+            buffer_ = other.buffer_;
+            start_ = other.start_ + startShift;
+            end_ = start_ + length;
+        }
+
         public ByteSegmentWriteView SubSegment(int startShift, int length)
         {
-            if (startShift <= 0 || start_ + startShift + length >= end_)
+            if (startShift < 0 || start_ + startShift + length >= end_)
                 throw new IndexOutOfRangeException();
 
             int newStart = start_ + startShift;
