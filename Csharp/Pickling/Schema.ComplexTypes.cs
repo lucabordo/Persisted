@@ -49,7 +49,14 @@ namespace Pickling
     {
         readonly Schema<T> innerSchema;
 
-        InlineArray(Schema<T> schema)
+        // TODO: adhere strictly to memory reuse policy :
+
+        //ByteSegmentReadView cachedFixedWrite;
+        //ByteSegmentReadView cachedDynamicWrite;
+        //ByteSegmentWriteView cachedFixedRead;
+        //ByteSegmentWriteView cachedDynamicRead;
+
+        public InlineArray(Schema<T> schema)
         {
             innerSchema = schema;
         }
