@@ -133,17 +133,17 @@ namespace Pickling
         #region Contracts
 
         [Conditional("DEBUG")]
-        protected void WritePreconditions(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element)
+        protected void CheckReadPreconditions(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
         {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());
-            Contract.Requires(dynamicStorage.Count == GetDynamicSize(element));
+            Contract.Requires(fixedStorage.Count == GetFixedSize());;
             Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
         }
 
         [Conditional("DEBUG")]
-        protected void ReadPreconditions(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        protected void CheckWritePreconditions(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element)
         {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());;
+            Contract.Requires(fixedStorage.Count == GetFixedSize());
+            Contract.Requires(dynamicStorage.Count == GetDynamicSize(element));
             Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
         }
 
