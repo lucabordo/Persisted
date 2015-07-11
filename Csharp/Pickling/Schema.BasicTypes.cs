@@ -21,7 +21,7 @@ namespace Pickling
 
         internal override int GetDynamicSize(byte element)
         {
-            return 0;
+            return Encoding.EncodingSizeForByte;
         }
 
         internal override byte Read(ByteSegmentReadView segment)
@@ -47,7 +47,7 @@ namespace Pickling
 
         internal override int GetDynamicSize(int element)
         {
-            return 0;
+            return Encoding.EncodingSizeForInt;
         }
 
         internal override int Read(ByteSegmentReadView segment)
@@ -73,7 +73,7 @@ namespace Pickling
 
         internal override int GetDynamicSize(long element)
         {
-            return 0;
+            return Encoding.EncodingSizeForLong;
         }
 
         internal override long Read(ByteSegmentReadView segment)
@@ -103,12 +103,12 @@ namespace Pickling
 
         internal override int GetDynamicSize(string element)
         {
-            return Encoding.EncodingSizeForString(element.Length);
+            return Encoding.EncodingSizeForInt
+                + Encoding.EncodingSizeForString(element.Length);
         }
 
         internal override string Read(ByteSegmentReadView segment)
         {
-
             int length = Encoding.ReadInt(segment);
             return Encoding.ReadString(segment, length, ref buffer_);
         }
