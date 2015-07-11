@@ -11,32 +11,26 @@ using System.Diagnostics.Contracts;
 namespace Pickling
 {
     /// <summary>
-    /// A schema component for generic arrays
+    /// A schema component for generic arrays;
+    /// Non-resizable arrays of arbitrary, non-homogeneous sizes
     /// </summary>
     internal class InlineArray<T> : Schema<T[]>
     {
         readonly Schema<T> innerSchema;
-
-        // TODO: adhere strictly to memory reuse policy :
-
-        //ByteSegmentReadView cachedFixedWrite;
-        //ByteSegmentReadView cachedDynamicWrite;
-        //ByteSegmentWriteView cachedFixedRead;
-        //ByteSegmentWriteView cachedDynamicRead;
 
         public InlineArray(Schema<T> schema)
         {
             innerSchema = schema;
         }
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForInt;
+            get { return false; }
         }
 
         internal override int GetDynamicSize(T[] element)
         {
-            int size = innerSchema.GetFixedSize() * element.Length;
+            int size = Encoding.EncodingSizeForInt;
 
             foreach (var entry in element)
             {
@@ -46,44 +40,56 @@ namespace Pickling
             return size;
         }
 
-        internal override T[] Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override T[] Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            int size = Encoding.ReadInt(fixedStorage);
+            int size = Encoding.ReadInt(segment);
             var result = new T[size];
-
-            // We split the dynamic storage into two segments: 
-            // One aimed at storing the fixed-size parts of the elements, one for the dynamic part
-            int innerBlockSize = innerSchema.GetFixedSize() * size;
-            var fixedPart = dynamicStorage.SubSegment(0, innerBlockSize);
-            var dynamicPart = dynamicStorage.SubSegment(innerBlockSize, dynamicStorage.Count - innerBlockSize);
 
             for (int i = 0; i < size; ++i)
             {
-                result[i] = innerSchema.Read(fixedPart, dynamicPart);
+                result[i] = innerSchema.Read(segment);
             }
 
             return result;
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T[] element)
+        internal override void Write(ByteSegmentWriteView segment, T[] element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
             // TODO: add marker? e.g. [size]
-            Encoding.WriteInt(fixedStorage, element.Length);
-
-            // We split the dynamic storage into two segments: 
-            // One aimed at storing the fixed-size parts of the elements, one for the dynamic part
-            int innerBlockSize = innerSchema.GetFixedSize() * element.Length;
-            var fixedPart = dynamicStorage.SubSegment(0, innerBlockSize);
-            var dynamicPart = dynamicStorage.SubSegment(innerBlockSize, dynamicStorage.Count - innerBlockSize);
+            Encoding.WriteInt(segment, element.Length);
 
             foreach (var entry in element)
             {
-                innerSchema.Write(fixedPart, dynamicPart, entry);
+                innerSchema.Write(segment, entry);
             }
+        }
+    }
+
+
+    /// <summary>
+    /// A schema component for generic arrays;
+    /// Arrays of a fixed, homogeneous size
+    /// </summary>
+    internal class FixedSizeInlineArray<T> : InlineArray<T>
+    {
+        readonly int size;
+
+        internal override bool IsFixedSize
+        {
+            get { return true; }
+        }
+
+        public FixedSizeInlineArray(Schema<T> schema, int size):
+            base(schema)
+        {
+            this.size = size;
+        }
+
+        internal override void Write(ByteSegmentWriteView segment, T[] element)
+        {
+            if (element.Length != size)
+                throw new ArgumentException("");
+            base.Write(segment, element);
         }
     }
     
@@ -106,9 +112,9 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return S1.GetFixedSize();
+            get { return S1.IsFixedSize; }
         }
 
         internal override int GetDynamicSize(Tuple<T1> element)
@@ -116,17 +122,15 @@ namespace Pickling
             return S1.GetDynamicSize(element.Item1);
         }
 
-        internal override Tuple<T1> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
             return Tuple.Create(i1);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
+            S1.Write(segment, element.Item1);
         }
 
         #endregion
@@ -153,10 +157,9 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize();
+            get { return S1.IsFixedSize && S2.IsFixedSize; }
         }
 
         internal override int GetDynamicSize(Tuple<T1, T2> element)
@@ -165,24 +168,20 @@ namespace Pickling
                 S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2);
         }
 
-        internal override Tuple<T1, T2> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
 
             return Tuple.Create(i1, i2);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
         }
 
         #endregion
@@ -210,39 +209,34 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return 2 * TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize() + S3.GetFixedSize();
+            get { return S1.IsFixedSize && S2.IsFixedSize && S3.IsFixedSize; }
         }
-
+        
         internal override int GetDynamicSize(Tuple<T1, T2, T3> element)
         {
             return 2 * TupleSchemaHelpers.DynamicSeparatorSize +
                 S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) + S3.GetDynamicSize(element.Item3);
         }
 
-        internal override Tuple<T1, T2, T3> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2, T3> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i3 = S3.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i3 = S3.Read(segment);
             return Tuple.Create(i1, i2, i3);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2, T3> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S3.Write(fixedStorage, dynamicStorage, element.Item3);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S3.Write(segment, element.Item3);
         }
 
         #endregion
@@ -272,11 +266,13 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return 3 * TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize() +
-                S3.GetFixedSize() + S4.GetFixedSize();
+            get
+            {
+                return S1.IsFixedSize && S2.IsFixedSize 
+                    && S3.IsFixedSize && S4.IsFixedSize;
+            }
         }
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4> element)
@@ -286,32 +282,28 @@ namespace Pickling
                 S3.GetDynamicSize(element.Item3) + S4.GetDynamicSize(element.Item4);
         }
 
-        internal override Tuple<T1, T2, T3, T4> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2, T3, T4> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i3 = S3.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i4 = S4.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i3 = S3.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i4 = S4.Read(segment);
 
             return Tuple.Create(i1, i2, i3, i4);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2, T3, T4> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S3.Write(fixedStorage, dynamicStorage, element.Item3);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S4.Write(fixedStorage, dynamicStorage, element.Item4);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S3.Write(segment, element.Item3);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S4.Write(segment, element.Item4);
         }
 
         #endregion
@@ -343,11 +335,14 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return 4 * TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize() + S3.GetFixedSize() +
-                S4.GetFixedSize() + S5.GetFixedSize();
+            get
+            {
+                return S1.IsFixedSize && S2.IsFixedSize 
+                    && S3.IsFixedSize && S4.IsFixedSize 
+                    && S5.IsFixedSize;
+            }
         }
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5> element)
@@ -358,36 +353,32 @@ namespace Pickling
                 S5.GetDynamicSize(element.Item5);
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2, T3, T4, T5> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i3 = S3.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i4 = S4.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i5 = S5.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i3 = S3.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i4 = S4.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i5 = S5.Read(segment);
 
             return Tuple.Create(i1, i2, i3, i4, i5);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2, T3, T4, T5> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S3.Write(fixedStorage, dynamicStorage, element.Item3);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S4.Write(fixedStorage, dynamicStorage, element.Item4);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S5.Write(fixedStorage, dynamicStorage, element.Item5);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S3.Write(segment, element.Item3);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S4.Write(segment, element.Item4);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S5.Write(segment, element.Item5);
         }
 
         #endregion
@@ -421,11 +412,14 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return 5 * TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize() + S3.GetFixedSize() +
-                S4.GetFixedSize() + S5.GetFixedSize() + S6.GetFixedSize();
+            get
+            {
+                return S1.IsFixedSize && S2.IsFixedSize
+                    && S3.IsFixedSize && S4.IsFixedSize
+                    && S5.IsFixedSize && S6.IsFixedSize;
+            }
         }
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5, T6> element)
@@ -436,40 +430,36 @@ namespace Pickling
                 S5.GetDynamicSize(element.Item5) + S6.GetDynamicSize(element.Item6);
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5, T6> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2, T3, T4, T5, T6> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i3 = S3.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i4 = S4.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i5 = S5.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i6 = S6.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i3 = S3.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i4 = S4.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i5 = S5.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i6 = S6.Read(segment);
 
             return Tuple.Create(i1, i2, i3, i4, i5, i6);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2, T3, T4, T5, T6> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S3.Write(fixedStorage, dynamicStorage, element.Item3);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S4.Write(fixedStorage, dynamicStorage, element.Item4);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S5.Write(fixedStorage, dynamicStorage, element.Item5);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S6.Write(fixedStorage, dynamicStorage, element.Item6);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S3.Write(segment, element.Item3);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S4.Write(segment, element.Item4);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S5.Write(segment, element.Item5);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S6.Write(segment, element.Item6);
         }
 
         #endregion
@@ -505,11 +495,15 @@ namespace Pickling
 
         #region Methods
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return 6 * TupleSchemaHelpers.FixedSeparatorSize +
-                S1.GetFixedSize() + S2.GetFixedSize() + S3.GetFixedSize() + S4.GetFixedSize() +
-                S5.GetFixedSize() + S6.GetFixedSize() + S7.GetFixedSize();
+            get
+            {
+                return S1.IsFixedSize && S2.IsFixedSize
+                    && S3.IsFixedSize && S4.IsFixedSize
+                    && S5.IsFixedSize && S6.IsFixedSize
+                    && S7.IsFixedSize;
+            }
         }
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5, T6, T7> element)
@@ -521,45 +515,41 @@ namespace Pickling
                 S7.GetDynamicSize(element.Item7);
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5, T6, T7> Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override Tuple<T1, T2, T3, T4, T5, T6, T7> Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-
-            var i1 = S1.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i2 = S2.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i3 = S3.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i4 = S4.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i5 = S5.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i6 = S6.Read(fixedStorage, dynamicStorage);
-            TupleSchemaHelpers.SkipSeparators(fixedStorage, dynamicStorage);
-            var i7 = S7.Read(fixedStorage, dynamicStorage);
+            var i1 = S1.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i2 = S2.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i3 = S3.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i4 = S4.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i5 = S5.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i6 = S6.Read(segment);
+            TupleSchemaHelpers.SkipSeparators(segment);
+            var i7 = S7.Read(segment);
 
             return Tuple.Create(i1, i2, i3, i4, i5, i6, i7);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, Tuple<T1, T2, T3, T4, T5, T6, T7> element)
+        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6, T7> element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
+            S1.Write(segment, element.Item1);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S2.Write(segment, element.Item2);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S3.Write(segment, element.Item3);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S4.Write(segment, element.Item4);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S5.Write(segment, element.Item5);
+            TupleSchemaHelpers.WriteSeparator(segment);
+            S6.Write(segment, element.Item6);
+            TupleSchemaHelpers.WriteSeparator(segment);
 
-            S1.Write(fixedStorage, dynamicStorage, element.Item1);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S2.Write(fixedStorage, dynamicStorage, element.Item2);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S3.Write(fixedStorage, dynamicStorage, element.Item3);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S4.Write(fixedStorage, dynamicStorage, element.Item4);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S5.Write(fixedStorage, dynamicStorage, element.Item5);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-            S6.Write(fixedStorage, dynamicStorage, element.Item6);
-            TupleSchemaHelpers.WriteSeparator(fixedStorage, dynamicStorage);
-
-            S7.Write(fixedStorage, dynamicStorage, element.Item7);
+            S7.Write(segment, element.Item7);
         }
 
         #endregion
@@ -570,16 +560,16 @@ namespace Pickling
         internal static int FixedSeparatorSize = Encoding.EncodingSizeForElementSeparator;
         internal static int DynamicSeparatorSize = Encoding.EncodingSizeForElementSeparator;
 
-        internal static void WriteSeparator(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage)
+        internal static void WriteSeparator(ByteSegmentWriteView segment)
         {
-            Encoding.WritePropertySeparator(fixedStorage);
-            Encoding.WriteObjectSeparator(dynamicStorage);
+            Encoding.WritePropertySeparator(segment);
+            Encoding.WriteObjectSeparator(segment);
         }
 
-        internal static void SkipSeparators(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal static void SkipSeparators(ByteSegmentReadView segment)
         {
-            Encoding.SkipPropertySeparator(fixedStorage);
-            Encoding.SkipObjectSeparator(dynamicStorage);
+            Encoding.SkipPropertySeparator(segment);
+            Encoding.SkipObjectSeparator(segment);
         }
     }
 }

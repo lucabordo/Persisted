@@ -39,10 +39,10 @@ namespace Pickling
             this.fixedContainer = fixedContainer;
             this.dynamicContainer = dynamicContainer;
             this.schema = schema;
-            fixedEncodingSize = schema.GetFixedSize();
+//            fixedEncodingSize = schema.GetFixedSize();
 
-            if (fixedContainer.Count % fixedEncodingSize != 0)
-                throw new ArgumentException("Fixed storage should be of size multiple of the schema fixed size");
+  //          if (fixedContainer.Count % fixedEncodingSize != 0)
+    //            throw new ArgumentException("Fixed storage should be of size multiple of the schema fixed size");
         }
 
         public void Dispose()
@@ -101,7 +101,7 @@ namespace Pickling
             var fixedWriter = fixedWriteBuffer.GetWriteView(0, fixedEncodingSize);
             var dynamicWriter = dynamicWriteBuffer.GetWriteView(0, dynamicEncodingSize);
 
-            schema.Write(fixedWriter, dynamicWriter, element);
+//            schema.Write(fixedWriter, dynamicWriter, element);
 
             // Emplace the buffers into the container
             fixedContainer.Write(fixedWriter, 0);

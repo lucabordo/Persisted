@@ -106,47 +106,24 @@ namespace Pickling
     /// </summary>
     public abstract class Schema<T>
     {
-        #region Abstract Properties and methods 
-
         /// <summary>
-        /// Number of bytes of fixed-size storage used by any element
+        /// True if the result of <code>GetDynamicSize(x)</code> is independent of <value>x</value>
         /// </summary>
-        internal abstract int GetFixedSize();
+        internal abstract bool IsFixedSize { get; }
 
         /// <summary>
-        /// Number of bytes of dynamic-size storage used by a specific element
+        /// Number of bytes of storage used by a specific element
         /// </summary>
         internal abstract int GetDynamicSize(T element);
 
         /// <summary>
         /// Extract an element of the corresponding type from a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract T Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage);
+        internal abstract T Read(ByteSegmentReadView segment);
 
         /// <summary>
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element);
-
-        #endregion
-
-        #region Contracts
-
-        [Conditional("DEBUG")]
-        protected void CheckReadPreconditions(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
-        {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());;
-            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
-        }
-
-        [Conditional("DEBUG")]
-        protected void CheckWritePreconditions(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element)
-        {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());
-            Contract.Requires(dynamicStorage.Count == GetDynamicSize(element));
-            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
-        }
-
-        #endregion
+        internal abstract void Write(ByteSegmentWriteView segment, T element);
     }
 }

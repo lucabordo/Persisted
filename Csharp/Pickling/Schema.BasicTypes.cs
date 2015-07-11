@@ -14,9 +14,9 @@ namespace Pickling
     /// </summary>
     internal class ByteSchema : Schema<byte>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForByte;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(byte element)
@@ -24,16 +24,14 @@ namespace Pickling
             return 0;
         }
 
-        internal override byte Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override byte Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadByte(fixedStorage);
+            return Encoding.ReadByte(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, byte element)
+        internal override void Write(ByteSegmentWriteView segment, byte element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteByte(fixedStorage, element);
+            Encoding.WriteByte(segment, element);
         }
     }
 
@@ -42,9 +40,9 @@ namespace Pickling
     /// </summary>
     internal class IntSchema : Schema<int>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForInt;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(int element)
@@ -52,16 +50,14 @@ namespace Pickling
             return 0;
         }
 
-        internal override int Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override int Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadInt(fixedStorage);
+            return Encoding.ReadInt(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, int element)
+        internal override void Write(ByteSegmentWriteView segment, int element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteInt(fixedStorage, element);
+            Encoding.WriteInt(segment, element);
         }
     }
 
@@ -70,9 +66,9 @@ namespace Pickling
     /// </summary>
     internal class LongSchema : Schema<long>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForLong;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(long element)
@@ -80,16 +76,14 @@ namespace Pickling
             return 0;
         }
 
-        internal override long Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override long Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadLong(fixedStorage);
+            return Encoding.ReadLong(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, long element)
+        internal override void Write(ByteSegmentWriteView segment, long element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteLong(fixedStorage, element);
+            Encoding.WriteLong(segment, element);
         }
     }
 
@@ -102,9 +96,9 @@ namespace Pickling
         // TODO: schemas are stateful, therefore construct explicitly
         private char[] buffer_ = new char[128];
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForOffset;
+            get { return false; }
         }
 
         internal override int GetDynamicSize(string element)
@@ -112,18 +106,17 @@ namespace Pickling
             return Encoding.EncodingSizeForString(element.Length);
         }
 
-        internal override string Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override string Read(ByteSegmentReadView segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            int length = Encoding.ReadInt(fixedStorage);
-            return Encoding.ReadString(dynamicStorage, length, ref buffer_);
+
+            int length = Encoding.ReadInt(segment);
+            return Encoding.ReadString(segment, length, ref buffer_);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, string element)
+        internal override void Write(ByteSegmentWriteView segment, string element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteInt(fixedStorage, element.Length);
-            Encoding.WriteString(dynamicStorage, element);
+            Encoding.WriteInt(segment, element.Length);
+            Encoding.WriteString(segment, element);
         }
     }
 }
