@@ -40,5 +40,9 @@ namespace Common
             get { return size_; }
         }
 
+        public override void Dispose()
+        {
+
+        }
     }
 }

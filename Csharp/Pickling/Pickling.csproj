@@ -46,6 +46,7 @@
     <Compile Include="Schema.CompositeTypes.cs" />
     <Compile Include="Schema.cs" />
     <Compile Include="Schema.BasicTypes.cs" />
+    <Compile Include="Table.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

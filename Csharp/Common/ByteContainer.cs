@@ -1,4 +1,4 @@
-﻿using Common;
+﻿using System;
 
 namespace Common
 {
@@ -11,7 +11,7 @@ namespace Common
     /// efficiency (we don't want to cross interfaces for every byte read and write);
     /// and atomicity (a whole segment should read or written in one go).
     /// </remarks>
-    public abstract class ByteContainer
+    public abstract class ByteContainer : IDisposable
     {
         /// <summary>
         /// Read the bytes from positions index to (index + segment.Count).
@@ -30,6 +30,13 @@ namespace Common
         public abstract long Count
         {
             get;
+        }
+
+        public abstract void Dispose();
+
+        void IDisposable.Dispose()
+        {
+            this.Dispose();
         }
     }
 }
