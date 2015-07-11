@@ -103,20 +103,28 @@ namespace Pickling
 
         internal override int GetDynamicSize(string element)
         {
-            return Encoding.EncodingSizeForInt
-                + Encoding.EncodingSizeForString(element.Length);
+            return 
+                Encoding.EncodingSizeForInt + 
+                Encoding.EncodingSizeForStringStartIndicator +
+                Encoding.EncodingSizeForString(element.Length) + 
+                Encoding.EncodingSizeForStringEndIndicator;
         }
 
         internal override string Read(ByteSegmentReadView segment)
         {
             int length = Encoding.ReadInt(segment);
-            return Encoding.ReadString(segment, length, ref buffer_);
+            Encoding.SkipStringStartIndicator(segment);
+            var result = Encoding.ReadString(segment, length, ref buffer_);
+            Encoding.SkipStringEndIndicator(segment);
+            return result;
         }
 
         internal override void Write(ByteSegmentWriteView segment, string element)
         {
             Encoding.WriteInt(segment, element.Length);
+            Encoding.WriteStringStartIndicator(segment);
             Encoding.WriteString(segment, element);
+            Encoding.WriteStringEndIndicator(segment);
         }
     }
 }

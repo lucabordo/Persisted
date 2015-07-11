@@ -10,12 +10,6 @@ using System.Diagnostics.Contracts;
 
 namespace Pickling
 {
-    // TODO: 
-    // Decorate the readable encoding for all these? 
-    // e.g. arrays    size[value1, value2...]
-    // e.g. tuples    (value1, value2)
-    // Of course for the efficient encoding these decorations to nothing
-
     /// <summary>
     /// A schema component for generic arrays;
     /// Non-resizable arrays of arbitrary, non-homogeneous sizes
@@ -36,7 +30,11 @@ namespace Pickling
 
         internal override int GetDynamicSize(T[] element)
         {
-            int size = Encoding.EncodingSizeForInt;
+            int size = 
+                Encoding.EncodingSizeForInt + 
+                Encoding.EncodingSizeForArrayStartIndicator + 
+                Encoding.EncodingSizeForArrayEndIndicator + 
+                Encoding.EncodingSizeForElementSeparator * (element.Length - 1);
 
             foreach (var entry in element)
             {
@@ -49,24 +47,33 @@ namespace Pickling
         internal override T[] Read(ByteSegmentReadView segment)
         {
             int size = Encoding.ReadInt(segment);
+            Encoding.SkipArrayStartIndicator(segment);
             var result = new T[size];
 
             for (int i = 0; i < size; ++i)
             {
+                if (i != 0)
+                    Encoding.SkipPropertySeparator(segment);
                 result[i] = innerSchema.Read(segment);
             }
 
+            Encoding.SkipArrayEndIndicator(segment);
             return result;
         }
 
         internal override void Write(ByteSegmentWriteView segment, T[] element)
         {
             Encoding.WriteInt(segment, element.Length);
+            Encoding.WriteArrayStartIndicator(segment);
 
-            foreach (var entry in element)
+            for (int i = 0; i < element.Length; ++i)
             {
-                innerSchema.Write(segment, entry);
+                if (i != 0)
+                    Encoding.WritePropertySeparator(segment);
+                innerSchema.Write(segment, element[i]);
             }
+
+            Encoding.WriteArrayStartIndicator(segment);
         }
     }
 
@@ -124,18 +131,25 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1> element)
         {
-            return S1.GetDynamicSize(element.Item1);
+            return 
+                Encoding.EncodingSizeForStringStartIndicator + 
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
             var i1 = S1.Read(segment);
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
             S1.Write(segment, element.Item1);
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -169,24 +183,35 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1, T2> element)
         {
-            return Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) + 
+                Encoding.EncodingSizeForElementSeparator +
+                 S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
 
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
+            
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -218,30 +243,44 @@ namespace Pickling
         {
             get { return S1.IsFixedSize && S2.IsFixedSize && S3.IsFixedSize; }
         }
-        
+
         internal override int GetDynamicSize(Tuple<T1, T2, T3> element)
         {
-            return 2 * Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) + S3.GetDynamicSize(element.Item3);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForElementSeparator +
+                 S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForElementSeparator +
+                S3.GetDynamicSize(element.Item3) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2, T3> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i3 = S3.Read(segment);
+
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2, i3);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
             Encoding.WritePropertySeparator(segment);
             S3.Write(segment, element.Item3);
+
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -282,13 +321,22 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4> element)
         {
-            return 3 * Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) +
-                S3.GetDynamicSize(element.Item3) + S4.GetDynamicSize(element.Item4);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForElementSeparator +
+                S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForElementSeparator +
+                S3.GetDynamicSize(element.Item3) +
+                Encoding.EncodingSizeForElementSeparator +
+                S4.GetDynamicSize(element.Item4) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2, T3, T4> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
@@ -297,11 +345,14 @@ namespace Pickling
             Encoding.SkipPropertySeparator(segment);
             var i4 = S4.Read(segment);
 
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2, i3, i4);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
@@ -309,6 +360,8 @@ namespace Pickling
             S3.Write(segment, element.Item3);
             Encoding.WritePropertySeparator(segment);
             S4.Write(segment, element.Item4);
+
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -352,14 +405,24 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5> element)
         {
-            return 4 * Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) +
-                S3.GetDynamicSize(element.Item3) + S4.GetDynamicSize(element.Item4) +
-                S5.GetDynamicSize(element.Item5);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForElementSeparator +
+                 S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForElementSeparator +
+                S3.GetDynamicSize(element.Item3) +
+                Encoding.EncodingSizeForElementSeparator +
+                S4.GetDynamicSize(element.Item4) +
+                Encoding.EncodingSizeForElementSeparator +
+                S5.GetDynamicSize(element.Item5) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2, T3, T4, T5> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
@@ -370,11 +433,14 @@ namespace Pickling
             Encoding.SkipPropertySeparator(segment);
             var i5 = S5.Read(segment);
 
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2, i3, i4, i5);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
@@ -384,6 +450,8 @@ namespace Pickling
             S4.Write(segment, element.Item4);
             Encoding.WritePropertySeparator(segment);
             S5.Write(segment, element.Item5);
+
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -429,14 +497,26 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5, T6> element)
         {
-            return 5 * Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) +
-                S3.GetDynamicSize(element.Item3) + S4.GetDynamicSize(element.Item4) +
-                S5.GetDynamicSize(element.Item5) + S6.GetDynamicSize(element.Item6);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForElementSeparator +
+                 S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForElementSeparator +
+                S3.GetDynamicSize(element.Item3) +
+                Encoding.EncodingSizeForElementSeparator +
+                S4.GetDynamicSize(element.Item4) +
+                Encoding.EncodingSizeForElementSeparator +
+                S5.GetDynamicSize(element.Item5) +
+                Encoding.EncodingSizeForElementSeparator +
+                S6.GetDynamicSize(element.Item6) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2, T3, T4, T5, T6> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
@@ -449,11 +529,14 @@ namespace Pickling
             Encoding.SkipPropertySeparator(segment);
             var i6 = S6.Read(segment);
 
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2, i3, i4, i5, i6);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
@@ -465,6 +548,8 @@ namespace Pickling
             S5.Write(segment, element.Item5);
             Encoding.WritePropertySeparator(segment);
             S6.Write(segment, element.Item6);
+
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion
@@ -513,15 +598,28 @@ namespace Pickling
 
         internal override int GetDynamicSize(Tuple<T1, T2, T3, T4, T5, T6, T7> element)
         {
-            return 6 * Encoding.EncodingSizeForElementSeparator +
-                S1.GetDynamicSize(element.Item1) + S2.GetDynamicSize(element.Item2) +
-                S3.GetDynamicSize(element.Item3) + S4.GetDynamicSize(element.Item4) +
-                S5.GetDynamicSize(element.Item5) + S6.GetDynamicSize(element.Item6) +
-                S7.GetDynamicSize(element.Item7);
+            return
+                Encoding.EncodingSizeForStringStartIndicator +
+                S1.GetDynamicSize(element.Item1) +
+                Encoding.EncodingSizeForElementSeparator +
+                 S2.GetDynamicSize(element.Item2) +
+                Encoding.EncodingSizeForElementSeparator +
+                S3.GetDynamicSize(element.Item3) +
+                Encoding.EncodingSizeForElementSeparator +
+                S4.GetDynamicSize(element.Item4) +
+                Encoding.EncodingSizeForElementSeparator +
+                S5.GetDynamicSize(element.Item5) +
+                Encoding.EncodingSizeForElementSeparator +
+                S6.GetDynamicSize(element.Item6) +
+                Encoding.EncodingSizeForElementSeparator +
+                S7.GetDynamicSize(element.Item7) +
+                Encoding.EncodingSizeForTupleEndIndicator;
         }
 
         internal override Tuple<T1, T2, T3, T4, T5, T6, T7> Read(ByteSegmentReadView segment)
         {
+            Encoding.SkipTupleStartIndicator(segment);
+
             var i1 = S1.Read(segment);
             Encoding.SkipPropertySeparator(segment);
             var i2 = S2.Read(segment);
@@ -536,11 +634,14 @@ namespace Pickling
             Encoding.SkipPropertySeparator(segment);
             var i7 = S7.Read(segment);
 
+            Encoding.SkipTupleEndIndicator(segment);
             return Tuple.Create(i1, i2, i3, i4, i5, i6, i7);
         }
 
         internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6, T7> element)
         {
+            Encoding.WriteTupleStartIndicator(segment);
+
             S1.Write(segment, element.Item1);
             Encoding.WritePropertySeparator(segment);
             S2.Write(segment, element.Item2);
@@ -553,8 +654,9 @@ namespace Pickling
             Encoding.WritePropertySeparator(segment);
             S6.Write(segment, element.Item6);
             Encoding.WritePropertySeparator(segment);
-
             S7.Write(segment, element.Item7);
+
+            Encoding.WriteTupleEndIndicator(segment);
         }
 
         #endregion

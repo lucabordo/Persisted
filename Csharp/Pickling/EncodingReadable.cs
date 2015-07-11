@@ -241,7 +241,147 @@ namespace Pickling
 
         #endregion
 
-        #region Read and write separators
+        #region Read and write separators and Indicators
+
+        // Note that indicators and separators are purely here for readability 
+        // of the encoding, no parsing should rely on them.
+
+        // Lots of lines for not much here but this has good readability 
+        // and allows for variable size indicators and separators
+
+        // ARRAYS
+
+        public static readonly int EncodingSizeForArrayStartIndicator = EncodingSizeForChar;
+        internal const char ArrayStartIndicator = '[';
+
+        /// <summary>
+        /// Insert an indicator of start of an array
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteArrayStartIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, ArrayStartIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the start of an array
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipArrayStartIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, ArrayStartIndicator);
+        }
+
+        public static readonly int EncodingSizeForArrayEndIndicator = EncodingSizeForChar;
+        internal const char ArrayEndIndicator = ']';
+
+        /// <summary>
+        /// Insert an indicator of end of an array
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteArrayEndIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, ArrayEndIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the end of an array
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipArrayEndIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, ArrayEndIndicator);
+        }
+
+        // TUPLES
+
+        public static readonly int EncodingSizeForTupleStartIndicator = EncodingSizeForChar;
+        internal const char TupleStartIndicator = '(';
+
+        /// <summary>
+        /// Insert an indicator of start of a tuple
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteTupleStartIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, TupleStartIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the start of a tuple
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipTupleStartIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, TupleStartIndicator);
+        }
+
+        public static readonly int EncodingSizeForTupleEndIndicator = EncodingSizeForChar;
+        internal const char TupleEndIndicator = ')';
+
+        /// <summary>
+        /// Insert an indicator of end of a tuple
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteTupleEndIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, TupleEndIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the end of a tuple
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipTupleEndIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, TupleEndIndicator);
+        }
+
+        // STRINGS
+
+        public static readonly int EncodingSizeForStringStartIndicator = EncodingSizeForChar;
+        internal const char StringStartIndicator = '"';
+
+        /// <summary>
+        /// Insert an indicator of start of a string
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteStringStartIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, StringStartIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the start of a string
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipStringStartIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, StringStartIndicator);
+        }
+
+        public static readonly int EncodingSizeForStringEndIndicator = EncodingSizeForChar;
+        internal const char StringEndIndicator = '"';
+
+        /// <summary>
+        /// Insert an indicator of End of a string
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteStringEndIndicator(ByteSegmentWriteView writer)
+        {
+            WriteChar(writer, StringEndIndicator);
+        }
+
+        /// <summary>
+        /// Read and skip an expected indicator used at the end of a string
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SkipStringEndIndicator(ByteSegmentReadView source)
+        {
+            SkipExpectedCharacter(source, StringEndIndicator);
+        }
+
+        // SEPARATORS
 
         public static readonly int EncodingSizeForElementSeparator = EncodingSizeForChar;
         internal const char ElementSeparator = ',';
