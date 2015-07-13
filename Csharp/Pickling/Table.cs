@@ -34,8 +34,6 @@ namespace Pickling
         /// </summary>
         private readonly ByteContainer index;
 
-        private static readonly int IndexEntryEncodingSize = Encoding.EncodingSizeForLong + Encoding.EncodingSizeForInt;
-
         #endregion
 
         #region Cached data
@@ -51,18 +49,31 @@ namespace Pickling
 
         public Table(Schema<T> schema, ByteContainer fixedContainer, ByteContainer dynamicContainer)
         {
+            // Provided fields
             this.index = fixedContainer;
             this.data = dynamicContainer;
             this.schema = schema;
 
+            // Cached data
             FixedSize = (schema.IsFixedSize)
                 ? FixedSize = schema.GetDynamicSize(default(T))
                 : null;
 
 
+            // Buffer allocations
             ReadIndexBuffer = new ByteBuffer(IndexEntryEncodingSize);
-            ReadIndexSegment = ReadIndexBuffer.GetReadView(0, IndexEntryEncodingSize);
+            ReadIndexSegment = ReadIndexBuffer.GetReadView();
 
+            WriteIndexBuffer = new ByteBuffer(IndexEntryEncodingSize);
+            WriteIndexSegment = WriteIndexBuffer.GetWriteView();
+
+            ReadDataBuffer = new ByteBuffer();
+            ReadDataSegment = ReadDataBuffer.GetReadView();
+
+            WriteDataBuffer = new ByteBuffer();
+            WriteDataSegment = WriteDataBuffer.GetWriteView();
+
+            // Checks
             //          if (fixedContainer.Count % fixedEncodingSize != 0)
             //            throw new ArgumentException("Fixed storage should be of size multiple of the schema fixed size");
         }
@@ -75,20 +86,20 @@ namespace Pickling
 
         #endregion
 
-        #region Main methods
+        #region Access to Index storage
 
-        public long Count
-        {
-            get
-            {
-                //                Contract.Invariant(index.Count % fixedEncodingSize == 0);
-                //              return index.Count / fixedEncodingSize;
+        /// <summary>
+        /// Size required to encode a object of type <see cref="IndexEntry"/>
+        /// </summary>
+        private static readonly int IndexEntryEncodingSize = Encoding.EncodingSizeForLong + Encoding.EncodingSizeForInt;
 
-                return 0;
-            }
-        }
-
-
+        /// <summary>
+        /// Entry stored in the Index,
+        /// represents the exact byte positions where an object is encoded in the data storage.
+        /// </summary>
+        /// <remarks>
+        /// This allows in theory constant-time lookup of each stored object's representation
+        /// </remarks>
         private struct IndexEntry
         {
             /// <summary>
@@ -103,79 +114,136 @@ namespace Pickling
         }
 
         // Fields for use only in the ReadIndex method
-        private readonly ByteBuffer ReadIndexBuffer = new ByteBuffer();
+        private readonly ByteBuffer ReadIndexBuffer;
         private ByteSegmentReadView ReadIndexSegment;
 
         private IndexEntry ReadIndex(long position)
         {
-            ReadIndexBuffer.Resize(Encoding.EncodingSizeForLong + Encoding.EncodingSizeForInt); // TODO: Once
-            ReadIndexSegment = ReadIndexBuffer.GetReadView(0, IndexEntryEncodingSize); // TODO: REINITIALIZE INSTEAD 
+            // Bounds checking
+
+            // Reset the buffers
+            Contract.Requires(ReadIndexBuffer.Capacity == IndexEntryEncodingSize);
+            ReadIndexBuffer.ResetView(ReadIndexSegment, 0, IndexEntryEncodingSize);
+
+            // Load segment from storage
             index.Read(ReadIndexSegment, position * IndexEntryEncodingSize);
 
-            return new IndexEntry
-            {
-                Start = Encoding.ReadLong(ReadIndexSegment),
-                Length = Encoding.ReadInt(ReadIndexSegment)
-            };
+            // Decode segment
+            long start = Encoding.ReadLong(ReadIndexSegment);
+            int length = Encoding.ReadInt(ReadIndexSegment);
+            return new IndexEntry { Start = start, Length = length };
         }
 
         // Fields for use only in the WriteIndex method
-        private readonly ByteBuffer WriteIndexBuffer = new ByteBuffer();
+        private readonly ByteBuffer WriteIndexBuffer;
         private ByteSegmentWriteView WriteIndexSegment;
 
         private void WriteIndex(long position, IndexEntry entry)
         {
-            WriteIndexBuffer.Resize(Encoding.EncodingSizeForLong + Encoding.EncodingSizeForInt); // TODO: Once
-            WriteIndexSegment = WriteIndexBuffer.GetWriteView(0, IndexEntryEncodingSize); // TODO: REINITIALIZE INSTEAD 
+            // Bounds checking
+
+            // Reset the buffers
+            Contract.Requires(WriteIndexBuffer.Capacity == IndexEntryEncodingSize);
+            WriteIndexBuffer.ResetView(WriteDataSegment, 0, IndexEntryEncodingSize);
+
+            // Encode segment
             Encoding.WriteLong(WriteIndexSegment, entry.Start);
             Encoding.WriteInt(WriteIndexSegment, entry.Length);
+
+            // Store the segment into storage
             index.Write(WriteIndexSegment, position * IndexEntryEncodingSize);
         }
 
-        private readonly ByteBuffer ReadDataBuffer = new ByteBuffer();
+        #endregion
+
+        #region Access to Data storage
+
+        // Fields for use only in the ReadData method
+        private readonly ByteBuffer ReadDataBuffer;
         private ByteSegmentReadView ReadDataSegment;
 
         private T ReadData(long start, int size)
         {
+            // Reset the buffers
             ReadDataBuffer.Resize(size);
-            ReadDataSegment = ReadDataBuffer.GetReadView(0, size); // TODO: REINITIALIZE INSTEAD 
+            ReadDataBuffer.ResetView(ReadDataSegment, 0, size);
+
+            // Load segment from storage
             data.Read(ReadDataSegment, start);
+
+            // Decode segment
             return schema.Read(ReadDataSegment);
         }
 
-        private readonly ByteBuffer WriteDataBuffer = new ByteBuffer();
+        // Fields for use only in the WriteData method
+        private readonly ByteBuffer WriteDataBuffer;
         private ByteSegmentWriteView WriteDataSegment;
 
-        private void WriteData(long position, T element, int size)
+        private void WriteData(long start, T element, int size)
         {
+            // Reset the buffers
             WriteDataBuffer.Resize(size);
-            WriteDataSegment = WriteDataBuffer.GetWriteView(0, size); // TODO: REINITIALIZE INSTEAD 
+            WriteDataBuffer.ResetView(WriteDataSegment, 0, size);
+
+            // Encode segment
             schema.Write(WriteDataSegment, element);
+
+            // Store the segment into storage
+            data.Write(WriteDataSegment, start);
         }
 
+        #endregion
+
+        #region Main methods
+
+        /// <summary>
+        /// Get the number of stored elements
+        /// </summary>
+        public long Count
+        {
+            get
+            {
+                Contract.Invariant(index.Count % IndexEntryEncodingSize == 0);
+                return index.Count / IndexEntryEncodingSize;
+            }
+        }
+
+        /// <summary>
+        /// Read the <paramref name="position"/>-th stored element
+        /// </summary>
         public T Read(long position)
         {
-            if (FixedSize != null)
+            if (FixedSize.HasValue)
             {
-                // optimizations
+                // When the encoding has fixed size we never write the index, and have no fragmentation 
+                return ReadData(position * FixedSize.Value, FixedSize.Value);
             }
-
-            IndexEntry index = ReadIndex(position);
-            return ReadData(index.Start, index.Length);
+            else
+            {
+                IndexEntry index = ReadIndex(position);
+                return ReadData(index.Start, index.Length);
+            }
         }
 
+        /// <summary>
+        /// Overwrite the data stored at the given position, or
+        /// if the <code>position == Count</code>, create a new position
+        /// </summary>
         public void Write(long position, T element)
         {
-            if (FixedSize != null)
+            if (FixedSize.HasValue)
             {
-                // TODO: optimizations
+                // When the encoding has fixed size we never write the index, and have no fragmentation 
+                WriteData(position * FixedSize.Value, element, FixedSize.Value);
             }
-            
-            long start = data.Count;
-            int size = schema.GetDynamicSize(element);
+            else
+            {
+                long start = data.Count;
+                int size = schema.GetDynamicSize(element);
 
-            WriteIndex(position, new IndexEntry { Start = start, Length = size });
-            WriteData(start, element, size);
+                WriteIndex(position, new IndexEntry { Start = start, Length = size });
+                WriteData(start, element, size);
+            }
 
             // TODO: Some assertions here!!
 

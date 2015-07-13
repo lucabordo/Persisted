@@ -26,17 +26,30 @@ namespace Common
         /// <summary>
         /// Get read access to a contiguous segment of the array
         /// </summary>
-        public ByteSegmentReadView GetReadView(int start, int endExclusive)
+        public ByteSegmentReadView GetReadView(int start = 0, int endExclusive = int.MinValue)
         {
+            if (endExclusive == int.MinValue)
+                endExclusive = buffer.Length;
             return new ByteSegmentReadView(buffer, start, endExclusive);
         }
 
         /// <summary>
         /// Get write access to a contiguous segment of the array
         /// </summary>
-        public ByteSegmentWriteView GetWriteView(int start, int endExclusive)
+        public ByteSegmentWriteView GetWriteView(int start = 0, int endExclusive = int.MinValue)
         {
+            if (endExclusive == int.MinValue)
+                endExclusive = buffer.Length;
             return new ByteSegmentWriteView(buffer, start, endExclusive);
+        }
+
+        /// <summary>
+        /// Reinitialize the bounds of a read or write view
+        /// </summary>
+        public void ResetView(ByteSegment segment, int start, int endExclusive)
+        {
+            Contract.Requires(ReferenceEquals(segment.buffer_, this.buffer));
+            segment.Reset(start, endExclusive);
         }
 
         /// <summary>
@@ -44,12 +57,12 @@ namespace Common
         /// </summary>
         public void Resize(int requiredSize, bool ignoreContent = false)
         {
-            if (buffer.Length < requiredSize)
+            while (buffer.Length < requiredSize)
             {
                 if (ignoreContent)
-                    buffer = new byte[requiredSize];
+                    buffer = new byte[buffer.Length * 2];
                 else
-                    Array.Resize(ref buffer, requiredSize);
+                    Array.Resize(ref buffer, buffer.Length * 2);
             }
         }
     }
@@ -60,19 +73,32 @@ namespace Common
     /// </summary>
     /// <remarks>
     /// These are conceptually structs, but are modified by callers (stream behaviour)
-    /// and should then be passed by ref. Instead we use references. 
-    /// We simply avoid reallocating. 
+    /// and should then be passed by ref. Instead we use references. We simply avoid reallocating. 
     /// </remarks>
     public class ByteSegment
     {
-        protected byte[] buffer_;
-        protected int start_;
-        protected int end_; // exclusive
+        internal byte[] buffer_;
+        internal int start_;
+        internal int end_; // exclusive
 
         internal ByteSegment(byte[] buffer, int start, int endExclusive)
         {
             Contract.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
             buffer_ = buffer;
+            start_ = start;
+            end_ = endExclusive;
+        }
+
+        /// <summary>
+        /// Re-initialize the bounds of the segment
+        /// </summary>
+        /// <remarks>
+        /// Can be called only through ByteBuffer; 
+        /// This makes sure that only code that owns the ByteBuffer can do this operation,
+        /// which is conceptually internal.
+        /// </remarks>
+        internal void Reset(int start, int endExclusive)
+        {
             start_ = start;
             end_ = endExclusive;
         }
@@ -105,23 +131,6 @@ namespace Common
         internal ByteSegmentReadView(byte[] buffer, int start, int endExclusive):
             base(buffer, start, endExclusive)
         {
-        }
-
-        internal void SetAsSubSegmentFrom(ByteSegmentReadView other, int startShift, int length)
-        {
-            Contract.Requires(startShift >= 0 && start_ + startShift + length <= end_);
-            buffer_ = other.buffer_;
-            start_ = other.start_ + startShift;
-            end_ = start_ + length;
-        }
-
-        public ByteSegmentReadView SubSegment(int startShift, int length)
-        {
-            if (startShift < 0 || start_ + startShift + length >= end_)
-                throw new IndexOutOfRangeException();
-
-            int newStart = start_ + startShift;
-            return new ByteSegmentReadView(buffer_, newStart, newStart + length);
         }
 
         public void MoveForward(int startShift)
@@ -166,23 +175,6 @@ namespace Common
         internal ByteSegmentWriteView(byte[] buffer, int start, int endExclusive)
             : base(buffer, start, endExclusive)
         {
-        }
-
-        internal void SetAsSubSegmentFrom(ByteSegmentWriteView other, int startShift, int length)
-        {
-            Contract.Requires(startShift >= 0 && start_ + startShift + length <= end_);
-            buffer_ = other.buffer_;
-            start_ = other.start_ + startShift;
-            end_ = start_ + length;
-        }
-
-        public ByteSegmentWriteView SubSegment(int startShift, int length)
-        {
-            if (startShift < 0 || start_ + startShift + length >= end_)
-                throw new IndexOutOfRangeException();
-
-            int newStart = start_ + startShift;
-            return new ByteSegmentWriteView(buffer_, newStart, newStart + length);
         }
 
         public void MoveForward(int startShift)
