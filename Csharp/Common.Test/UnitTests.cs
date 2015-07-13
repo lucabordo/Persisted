@@ -18,7 +18,7 @@ namespace Common.Test
             Assert.AreEqual(1, buffer.Capacity);
 
             buffer.Resize(5, ignoreContent: true);
-            Assert.AreEqual(5, buffer.Capacity);
+            Assert.IsTrue(buffer.Capacity >= 5);
 
             var read = buffer.GetWriteView(1, 3);
             read[0] = (byte)'A';
