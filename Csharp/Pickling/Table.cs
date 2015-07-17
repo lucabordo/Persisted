@@ -11,6 +11,15 @@ using Common;
 
 namespace Pickling
 {
+    public static class Table
+    {
+        public static Table<T> Create<T>(Schema<T> schema, ByteContainer indexContainer, ByteContainer dataContainer)
+        {
+            return new Table<T>(schema, indexContainer, dataContainer);
+        }
+    }
+
+
     /// <summary>
     /// A contiguous, random access collection of elements of a certain Schema,
     /// transparently serialized into two ByteContainers.
@@ -47,11 +56,11 @@ namespace Pickling
 
         #region Construction and Disposal
 
-        public Table(Schema<T> schema, ByteContainer fixedContainer, ByteContainer dynamicContainer)
+        public Table(Schema<T> schema, ByteContainer indexContainer, ByteContainer dataContainer)
         {
             // Provided fields
-            this.index = fixedContainer;
-            this.data = dynamicContainer;
+            this.index = indexContainer;
+            this.data = dataContainer;
             this.schema = schema;
 
             // Cached data
@@ -59,22 +68,17 @@ namespace Pickling
                 ? FixedSize = schema.GetDynamicSize(default(T))
                 : null;
 
-
             // Buffer allocations
-            ReadIndexBuffer = new ByteBuffer(IndexEntryEncodingSize);
-            ReadIndexSegment = ReadIndexBuffer.GetReadView();
+            Buffer = new ByteBuffer(IndexEntryEncodingSize);
 
-            WriteIndexBuffer = new ByteBuffer(IndexEntryEncodingSize);
-            WriteIndexSegment = WriteIndexBuffer.GetWriteView();
+            BufferReader = Buffer.GetReadView();
+            BufferStorer = Buffer.GetReadView();
 
-            ReadDataBuffer = new ByteBuffer();
-            ReadDataSegment = ReadDataBuffer.GetReadView();
-
-            WriteDataBuffer = new ByteBuffer();
-            WriteDataSegment = WriteDataBuffer.GetWriteView();
+            BufferWriter = Buffer.GetWriteView();
+            BufferLoader = Buffer.GetWriteView();
 
             // Checks
-            //          if (fixedContainer.Count % fixedEncodingSize != 0)
+            //          if (indexContainer.Count % fixedEncodingSize != 0)
             //            throw new ArgumentException("Fixed storage should be of size multiple of the schema fixed size");
         }
 
@@ -113,83 +117,85 @@ namespace Pickling
             public int Length;
         }
 
-        // Fields for use only in the ReadIndex method
-        private readonly ByteBuffer ReadIndexBuffer;
-        private ByteSegmentReadView ReadIndexSegment;
+        // All reading and writing goes to the containers through a buffer
+        // The buffer is reused because this class runs single-threaded (check).
+
+        // The table reads and writes the buffer using a reader and writer
+        // The containers use another pair of reader/writers. THESE SHOULD HAVE DIFFERENT TYPE (load/store)
+
+        private ByteSegmentReadView BufferReader;
+        private ByteSegmentWriteView BufferWriter;
+
+        private readonly ByteBuffer Buffer;
+
+        private ByteSegmentReadView BufferStorer;
+        private ByteSegmentWriteView BufferLoader;
 
         private IndexEntry ReadIndex(long position)
         {
             // Bounds checking
 
             // Reset the buffers
-            Contract.Requires(ReadIndexBuffer.Capacity == IndexEntryEncodingSize);
-            ReadIndexBuffer.ResetView(ReadIndexSegment, 0, IndexEntryEncodingSize);
+            Contract.Requires(Buffer.Capacity > IndexEntryEncodingSize);
+            Buffer.ResetView(BufferReader, 0, IndexEntryEncodingSize);
+            Buffer.ResetView(BufferLoader, 0, IndexEntryEncodingSize);
 
             // Load segment from storage
-            index.Read(ReadIndexSegment, position * IndexEntryEncodingSize);
+            index.Read(BufferLoader, position * IndexEntryEncodingSize);
 
             // Decode segment
-            long start = Encoding.ReadLong(ReadIndexSegment);
-            int length = Encoding.ReadInt(ReadIndexSegment);
+            long start = Encoding.ReadLong(BufferReader);
+            int length = Encoding.ReadInt(BufferReader);
             return new IndexEntry { Start = start, Length = length };
         }
-
-        // Fields for use only in the WriteIndex method
-        private readonly ByteBuffer WriteIndexBuffer;
-        private ByteSegmentWriteView WriteIndexSegment;
 
         private void WriteIndex(long position, IndexEntry entry)
         {
             // Bounds checking
 
             // Reset the buffers
-            Contract.Requires(WriteIndexBuffer.Capacity == IndexEntryEncodingSize);
-            WriteIndexBuffer.ResetView(WriteDataSegment, 0, IndexEntryEncodingSize);
+            Contract.Requires(Buffer.Capacity > IndexEntryEncodingSize);
+            Buffer.ResetView(BufferWriter, 0, IndexEntryEncodingSize);
+            Buffer.ResetView(BufferStorer, 0, IndexEntryEncodingSize);
 
             // Encode segment
-            Encoding.WriteLong(WriteIndexSegment, entry.Start);
-            Encoding.WriteInt(WriteIndexSegment, entry.Length);
+            Encoding.WriteLong(BufferWriter, entry.Start);
+            Encoding.WriteInt(BufferWriter, entry.Length);
 
             // Store the segment into storage
-            index.Write(WriteIndexSegment, position * IndexEntryEncodingSize);
+            index.Write(BufferStorer, position * IndexEntryEncodingSize);
         }
 
         #endregion
 
         #region Access to Data storage
 
-        // Fields for use only in the ReadData method
-        private readonly ByteBuffer ReadDataBuffer;
-        private ByteSegmentReadView ReadDataSegment;
-
         private T ReadData(long start, int size)
         {
             // Reset the buffers
-            ReadDataBuffer.Resize(size);
-            ReadDataBuffer.ResetView(ReadDataSegment, 0, size);
+            Buffer.Resize(size);
+            Buffer.ResetView(BufferReader, 0, size);
+            Buffer.ResetView(BufferLoader, 0, size);
 
             // Load segment from storage
-            data.Read(ReadDataSegment, start);
+            data.Read(BufferLoader, start);
 
             // Decode segment
-            return schema.Read(ReadDataSegment);
+            return schema.Read(BufferReader);
         }
-
-        // Fields for use only in the WriteData method
-        private readonly ByteBuffer WriteDataBuffer;
-        private ByteSegmentWriteView WriteDataSegment;
 
         private void WriteData(long start, T element, int size)
         {
             // Reset the buffers
-            WriteDataBuffer.Resize(size);
-            WriteDataBuffer.ResetView(WriteDataSegment, 0, size);
+            Buffer.Resize(size);
+            Buffer.ResetView(BufferWriter, 0, size);
+            Buffer.ResetView(BufferStorer, 0, size);
 
             // Encode segment
-            schema.Write(WriteDataSegment, element);
+            schema.Write(BufferWriter, element);
 
             // Store the segment into storage
-            data.Write(WriteDataSegment, start);
+            data.Write(BufferStorer, start);
         }
 
         #endregion

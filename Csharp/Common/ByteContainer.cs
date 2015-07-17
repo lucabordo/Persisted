@@ -14,15 +14,15 @@ namespace Common
     public abstract class ByteContainer : IDisposable
     {
         /// <summary>
-        /// Read the bytes from positions index to (index + segment.Count).
+        /// Load into a segment the bytes contained at positions (index + segment.Count)
         /// </summary>
-        public abstract void Read(ByteSegmentReadView segment, long index);
+        public abstract void Read(ByteSegmentWriteView segment, long index);
         
         /// <summary>
-        /// Write the bytes at positions index to (index + segment.Count).
+        /// Store the bytes from a segment into the storage at positions index to (index + segment.Count);
         /// The container may be extended if needed, but preserving contiguity.
         /// </summary>
-        public abstract void Write(ByteSegmentWriteView segment, long index);
+        public abstract void Write(ByteSegmentReadView segment, long index);
 
         /// <summary>
         /// Number of contiguous bytes effectively written.

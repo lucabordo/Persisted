@@ -4,7 +4,7 @@ using System.Diagnostics.Contracts;
 namespace Common
 {
     /// <summary>
-    /// A reusable array of bytes that can offers read and write views.
+    /// A reusable array of bytes that can offer read and write views.
     /// </summary>
     public class ByteBuffer
     {
@@ -160,6 +160,7 @@ namespace Common
         /// </summary>
         public void Read(int index, byte[] otherArray, int otherIndex, int length)
         {
+            Contract.Requires(start_ == 0);
             if (index < 0 || start_ + index + length > end_)
                 throw new IndexOutOfRangeException();
             Array.Copy(buffer_, start_ + index, otherArray, otherIndex, length);
@@ -204,6 +205,7 @@ namespace Common
         /// </summary>
         public void Write(int index, byte[] otherArray, int otherIndex, int length)
         {
+            Contract.Requires(start_ == 0);
             if (index < 0 || start_ + index + length > end_)
                 throw new IndexOutOfRangeException();
             Array.Copy(otherArray, otherIndex, buffer_, start_ + index, length);
