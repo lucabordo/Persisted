@@ -9,6 +9,20 @@ namespace Pickling.Test
     public class UnitTests
     {
         #region Basic pickling tests
+
+        [TestMethod]
+        public void TestEncodeDecodeString()
+        {
+            var buffer = new ByteBuffer(1000);
+
+            var testString = "Hello World!";
+            var encodingSize = ReadableEncoding.EncodingSizeForChar * testString.Length;
+
+            ReadableEncoding.WriteString(buffer.GetWriteView(0, encodingSize), testString);
+            var characters = new char[1000];
+            var check = ReadableEncoding.ReadString(buffer.GetReadView(0, encodingSize), testString.Length, ref characters);
+            Assert.AreEqual(testString, check);
+        }
         
         [TestMethod]
         public void TestPiclingLong1()
