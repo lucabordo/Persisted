@@ -68,35 +68,28 @@ namespace Pickling
             // We have more negative values than positive ones. 
             // To read -9223372036854775808 correctly we need to read everything negated
 
-            // Possible '-' sign at start
-            int i = 1;
-            var first = ReadChar(source);
+            // Locate first non-space
+            int i = 0;
+            char currentChar;
 
-            bool negative = (first == '-');
-            long minusResults = negative ? 0 : -ToInt(first);
-
-            // digits 
-            for (; i < digits; ++i)
+            for (; ; ++i)
             {
-                char next = ReadChar(source);
+                currentChar = ReadChar(source);
 
-                if (next == ' ')
-                {
+                if (currentChar != ' ')
                     break;
-                }
-                else
-                {
-                    minusResults = (10 * minusResults) - ToInt(next);
-                }
+                if (i >= digits)
+                    throw new Exception();
             }
 
+            bool negative = (currentChar == '-');
+            long minusResults = negative ? 0 : -ToInt(currentChar);
+            
             // remaining spaces
             for (++i; i < digits; ++i)
             {
-                if (ReadChar(source) != ' ')
-                {
-                    throw new Exception();
-                }
+                currentChar = ReadChar(source);
+                minusResults = (10 * minusResults) - ToInt(currentChar);
             }
 
             return negative ? minusResults : (-minusResults);
