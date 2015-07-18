@@ -27,11 +27,11 @@ namespace Common
         /// <summary>
         /// Number of contiguous bytes effectively written.
         /// </summary>
-        public abstract long Count
-        {
-            get;
-        }
+        public abstract long Count { get; }
 
+        /// <summary>
+        /// Cleanup of any resource
+        /// </summary>
         public abstract void Dispose();
 
         void IDisposable.Dispose()

@@ -37,6 +37,8 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AsyncStorage.cs" />
+    <Compile Include="AsyncStorageBasedContainer.cs" />
     <Compile Include="ByteBuffer.cs" />
     <Compile Include="ByteContainer.cs" />
     <Compile Include="Cache.cs" />
