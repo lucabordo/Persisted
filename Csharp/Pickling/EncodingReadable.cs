@@ -13,8 +13,7 @@ namespace Pickling
     /// and various encodings if we need to decide encoding dynamically.
     /// Not that encoding objects are NOT THREAD-SAFE so one instance per thread should be created
     /// </remarks>
-    public // TODO: this should be internal - solve the visibility export 
-        static class ReadableEncoding
+    internal static class ReadableEncoding
     {
         #region Read and Write numbers
 
