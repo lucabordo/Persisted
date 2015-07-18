@@ -16,13 +16,13 @@ namespace Common
         /// <summary>
         /// Load into a segment the bytes contained at positions (index + segment.Count)
         /// </summary>
-        public abstract void Read(ByteSegmentWriteView segment, long index);
+        public abstract void Load(ByteBufferBlockWriter segment, long index);
         
         /// <summary>
         /// Store the bytes from a segment into the storage at positions index to (index + segment.Count);
         /// The container may be extended if needed, but preserving contiguity.
         /// </summary>
-        public abstract void Write(ByteSegmentReadView segment, long index);
+        public abstract void Store(ByteBufferBlockReader segment, long index);
 
         /// <summary>
         /// Number of contiguous bytes effectively written.

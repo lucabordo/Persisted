@@ -18,9 +18,9 @@ namespace Pickling.Test
             var testString = "Hello World!";
             var encodingSize = ReadableEncoding.EncodingSizeForChar * testString.Length;
 
-            ReadableEncoding.WriteString(buffer.GetWriteView(0, encodingSize), testString);
+            ReadableEncoding.WriteString(buffer.GetWriteCursor(0, encodingSize), testString);
             var characters = new char[1000];
-            var check = ReadableEncoding.ReadString(buffer.GetReadView(0, encodingSize), testString.Length, ref characters);
+            var check = ReadableEncoding.ReadString(buffer.GetReadCursor(0, encodingSize), testString.Length, ref characters);
             Assert.AreEqual(testString, check);
         }
 
@@ -32,8 +32,8 @@ namespace Pickling.Test
             var testNumber = -14333;
             var encodingSize = ReadableEncoding.EncodingSizeForInt;
 
-            ReadableEncoding.WriteInt(buffer.GetWriteView(0, encodingSize), testNumber);
-            var check = ReadableEncoding.ReadInt(buffer.GetReadView(0, encodingSize));
+            ReadableEncoding.WriteInt(buffer.GetWriteCursor(0, encodingSize), testNumber);
+            var check = ReadableEncoding.ReadInt(buffer.GetReadCursor(0, encodingSize));
             Assert.AreEqual(testNumber, check);
         }
 

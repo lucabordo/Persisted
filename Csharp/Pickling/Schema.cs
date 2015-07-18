@@ -119,11 +119,11 @@ namespace Pickling
         /// <summary>
         /// Extract an element of the corresponding type from a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract T Read(ByteSegmentReadView segment);
+        internal abstract T Read(ByteBufferReadCursor segment);
 
         /// <summary>
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract void Write(ByteSegmentWriteView segment, T element);
+        internal abstract void Write(ByteBufferWriteCursor segment, T element);
     }
 }

@@ -71,11 +71,11 @@ namespace Pickling
             // Buffer allocations
             Buffer = new ByteBuffer(IndexEntryEncodingSize);
 
-            BufferReader = Buffer.GetReadView();
-            BufferStorer = Buffer.GetReadView();
+            BufferReader = Buffer.GetReadCursor();
+            BufferWriter = Buffer.GetWriteCursor();
 
-            BufferWriter = Buffer.GetWriteView();
-            BufferLoader = Buffer.GetWriteView();
+            BufferStorer = Buffer.GetBlockReader();          
+            BufferLoader = Buffer.GetBlockWriter();
 
             // Checks
             //          if (indexContainer.Count % fixedEncodingSize != 0)
@@ -123,13 +123,13 @@ namespace Pickling
         // The table reads and writes the buffer using a reader and writer
         // The containers use another pair of reader/writers. THESE SHOULD HAVE DIFFERENT TYPE (load/store)
 
-        private ByteSegmentReadView BufferReader;
-        private ByteSegmentWriteView BufferWriter;
+        private ByteBufferReadCursor BufferReader;
+        private ByteBufferWriteCursor BufferWriter;
 
         private readonly ByteBuffer Buffer;
 
-        private ByteSegmentReadView BufferStorer;
-        private ByteSegmentWriteView BufferLoader;
+        private ByteBufferBlockReader BufferStorer;
+        private ByteBufferBlockWriter BufferLoader;
 
         private IndexEntry ReadIndex(long position)
         {
@@ -137,11 +137,11 @@ namespace Pickling
 
             // Reset the buffers
             Contract.Requires(Buffer.Capacity > IndexEntryEncodingSize);
-            Buffer.ResetView(BufferReader, 0, IndexEntryEncodingSize);
-            Buffer.ResetView(BufferLoader, 0, IndexEntryEncodingSize);
+            Buffer.Reset(BufferReader, IndexEntryEncodingSize);
+            Buffer.Reset(BufferLoader, IndexEntryEncodingSize);
 
             // Load segment from storage
-            index.Read(BufferLoader, position * IndexEntryEncodingSize);
+            index.Load(BufferLoader, position * IndexEntryEncodingSize);
 
             // Decode segment
             long start = Encoding.ReadLong(BufferReader);
@@ -155,15 +155,15 @@ namespace Pickling
 
             // Reset the buffers
             Contract.Requires(Buffer.Capacity > IndexEntryEncodingSize);
-            Buffer.ResetView(BufferWriter, 0, IndexEntryEncodingSize);
-            Buffer.ResetView(BufferStorer, 0, IndexEntryEncodingSize);
+            Buffer.Reset(BufferWriter, IndexEntryEncodingSize);
+            Buffer.Reset(BufferStorer, IndexEntryEncodingSize);
 
             // Encode segment
             Encoding.WriteLong(BufferWriter, entry.Start);
             Encoding.WriteInt(BufferWriter, entry.Length);
 
             // Store the segment into storage
-            index.Write(BufferStorer, position * IndexEntryEncodingSize);
+            index.Store(BufferStorer, position * IndexEntryEncodingSize);
         }
 
         #endregion
@@ -174,11 +174,11 @@ namespace Pickling
         {
             // Reset the buffers
             Buffer.Resize(size);
-            Buffer.ResetView(BufferReader, 0, size);
-            Buffer.ResetView(BufferLoader, 0, size);
+            Buffer.Reset(BufferReader, size);
+            Buffer.Reset(BufferLoader, size);
 
             // Load segment from storage
-            data.Read(BufferLoader, start);
+            data.Load(BufferLoader, start);
 
             // Decode segment
             return schema.Read(BufferReader);
@@ -188,14 +188,14 @@ namespace Pickling
         {
             // Reset the buffers
             Buffer.Resize(size);
-            Buffer.ResetView(BufferWriter, 0, size);
-            Buffer.ResetView(BufferStorer, 0, size);
+            Buffer.Reset(BufferWriter, size);
+            Buffer.Reset(BufferStorer, size);
 
             // Encode segment
             schema.Write(BufferWriter, element);
 
             // Store the segment into storage
-            data.Write(BufferStorer, start);
+            data.Store(BufferStorer, start);
         }
 
         #endregion

@@ -24,12 +24,12 @@ namespace Pickling
             return Encoding.EncodingSizeForByte;
         }
 
-        internal override byte Read(ByteSegmentReadView segment)
+        internal override byte Read(ByteBufferReadCursor segment)
         {
             return Encoding.ReadByte(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, byte element)
+        internal override void Write(ByteBufferWriteCursor segment, byte element)
         {
             Encoding.WriteByte(segment, element);
         }
@@ -50,12 +50,12 @@ namespace Pickling
             return Encoding.EncodingSizeForInt;
         }
 
-        internal override int Read(ByteSegmentReadView segment)
+        internal override int Read(ByteBufferReadCursor segment)
         {
             return Encoding.ReadInt(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, int element)
+        internal override void Write(ByteBufferWriteCursor segment, int element)
         {
             Encoding.WriteInt(segment, element);
         }
@@ -76,12 +76,12 @@ namespace Pickling
             return Encoding.EncodingSizeForLong;
         }
 
-        internal override long Read(ByteSegmentReadView segment)
+        internal override long Read(ByteBufferReadCursor segment)
         {
             return Encoding.ReadLong(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, long element)
+        internal override void Write(ByteBufferWriteCursor segment, long element)
         {
             Encoding.WriteLong(segment, element);
         }
@@ -110,7 +110,7 @@ namespace Pickling
                 Encoding.EncodingSizeForStringEndIndicator;
         }
 
-        internal override string Read(ByteSegmentReadView segment)
+        internal override string Read(ByteBufferReadCursor segment)
         {
             int length = Encoding.ReadInt(segment);
             Encoding.SkipStringStartIndicator(segment);
@@ -119,7 +119,7 @@ namespace Pickling
             return result;
         }
 
-        internal override void Write(ByteSegmentWriteView segment, string element)
+        internal override void Write(ByteBufferWriteCursor segment, string element)
         {
             Encoding.WriteInt(segment, element.Length);
             Encoding.WriteStringStartIndicator(segment);

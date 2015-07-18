@@ -44,7 +44,7 @@ namespace Pickling
             return size;
         }
 
-        internal override T[] Read(ByteSegmentReadView segment)
+        internal override T[] Read(ByteBufferReadCursor segment)
         {
             int size = Encoding.ReadInt(segment);
             Encoding.SkipArrayStartIndicator(segment);
@@ -61,7 +61,7 @@ namespace Pickling
             return result;
         }
 
-        internal override void Write(ByteSegmentWriteView segment, T[] element)
+        internal override void Write(ByteBufferWriteCursor segment, T[] element)
         {
             Encoding.WriteInt(segment, element.Length);
             Encoding.WriteArrayStartIndicator(segment);
@@ -97,7 +97,7 @@ namespace Pickling
             this.size = size;
         }
 
-        internal override void Write(ByteSegmentWriteView segment, T[] element)
+        internal override void Write(ByteBufferWriteCursor segment, T[] element)
         {
             if (element.Length != size)
                 throw new ArgumentException("Array does not have the size specified by schema.");
@@ -137,7 +137,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
             var i1 = S1.Read(segment);
@@ -145,7 +145,7 @@ namespace Pickling
             return Tuple.Create(i1);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
             S1.Write(segment, element.Item1);
@@ -191,7 +191,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -203,7 +203,7 @@ namespace Pickling
             return Tuple.Create(i1, i2);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
@@ -256,7 +256,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2, T3> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2, T3> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -270,7 +270,7 @@ namespace Pickling
             return Tuple.Create(i1, i2, i3);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2, T3> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
@@ -333,7 +333,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2, T3, T4> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2, T3, T4> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -349,7 +349,7 @@ namespace Pickling
             return Tuple.Create(i1, i2, i3, i4);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2, T3, T4> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
@@ -419,7 +419,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2, T3, T4, T5> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -437,7 +437,7 @@ namespace Pickling
             return Tuple.Create(i1, i2, i3, i4, i5);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2, T3, T4, T5> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
@@ -513,7 +513,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5, T6> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2, T3, T4, T5, T6> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -533,7 +533,7 @@ namespace Pickling
             return Tuple.Create(i1, i2, i3, i4, i5, i6);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2, T3, T4, T5, T6> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
@@ -616,7 +616,7 @@ namespace Pickling
                 Encoding.EncodingSizeForTupleEndIndicator;
         }
 
-        internal override Tuple<T1, T2, T3, T4, T5, T6, T7> Read(ByteSegmentReadView segment)
+        internal override Tuple<T1, T2, T3, T4, T5, T6, T7> Read(ByteBufferReadCursor segment)
         {
             Encoding.SkipTupleStartIndicator(segment);
 
@@ -638,7 +638,7 @@ namespace Pickling
             return Tuple.Create(i1, i2, i3, i4, i5, i6, i7);
         }
 
-        internal override void Write(ByteSegmentWriteView segment, Tuple<T1, T2, T3, T4, T5, T6, T7> element)
+        internal override void Write(ByteBufferWriteCursor segment, Tuple<T1, T2, T3, T4, T5, T6, T7> element)
         {
             Encoding.WriteTupleStartIndicator(segment);
 
