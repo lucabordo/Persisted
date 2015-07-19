@@ -75,8 +75,10 @@ namespace Common
         /// </summary>
         public void Reset(ByteBufferCursor segment, int endExclusive)
         {
-            Contract.Requires(ReferenceEquals(segment.buffer_, this.buffer));
-            segment.Reset(0, endExclusive);
+            // Buffer needs to be passed because of possible Resizes - 
+            // otherwise ByteBufferCursor would need a reference to the object, not its internal array
+            Contract.Requires(ReferenceEquals(segment.buffer, this.buffer));
+            segment.Reset(buffer, 0, endExclusive);
         }
 
         #endregion
@@ -108,8 +110,10 @@ namespace Common
         /// </summary>
         public void Reset(ByteBufferBlockView segment, int length)
         {
-            Contract.Requires(ReferenceEquals(segment.buffer_, this.buffer));
-            segment.Reset(length);
+            // Buffer needs to be passed because of possible Resizes - 
+            // otherwise ByteBufferBlockView would need a reference to the object, not its internal array
+            Contract.Requires(ReferenceEquals(segment.buffer, this.buffer));
+            segment.Reset(buffer, length);
         }
 
         #endregion
@@ -126,13 +130,12 @@ namespace Common
     /// </summary>
     public class ByteBufferBlockView
     {
-        internal byte[] buffer_;
-        internal int length_;
+        internal byte[] buffer;
+        internal int length;
 
         internal ByteBufferBlockView(byte[] buffer, int length)
         {
-            buffer_ = buffer;
-            length_ = length;
+            Reset(buffer, length);
         }
 
         /// <summary>
@@ -141,9 +144,10 @@ namespace Common
         /// <remarks>
         /// Only code that owns the ByteBuffer will be able call this operation, through ByteBuffer's Reset method.
         /// </remarks>
-        internal void Reset(int length)
+        internal void Reset(byte[] buffer, int length)
         {
-            length_ = length;
+            this.buffer = buffer;
+            this.length = length;
         }
 
         /// <summary>
@@ -151,7 +155,7 @@ namespace Common
         /// </summary>
         public int Count
         {
-            get { return length_; }
+            get { return length; }
         }
     }
 
@@ -174,9 +178,9 @@ namespace Common
         /// </summary>
         public void Read(int bufferStart, byte[] destinationArray, int destinationStart, int countToCopy)
         {
-            if (bufferStart < 0 || bufferStart + countToCopy > length_)
+            if (bufferStart < 0 || bufferStart + countToCopy > length)
                 throw new IndexOutOfRangeException();
-            Array.Copy(buffer_, bufferStart, destinationArray, destinationStart, countToCopy);
+            Array.Copy(buffer, bufferStart, destinationArray, destinationStart, countToCopy);
         }
     }
 
@@ -200,9 +204,9 @@ namespace Common
         /// </summary>
         public void Write(int bufferStart, byte[] sourceArray, int sourceIndex, int countToCopy)
         {
-            if (bufferStart < 0 || bufferStart + countToCopy > length_)
+            if (bufferStart < 0 || bufferStart + countToCopy > length)
                 throw new IndexOutOfRangeException();
-            Array.Copy(sourceArray, sourceIndex, buffer_, bufferStart, countToCopy);
+            Array.Copy(sourceArray, sourceIndex, buffer, bufferStart, countToCopy);
         }
     }
 
@@ -219,16 +223,13 @@ namespace Common
     /// </remarks>
     public class ByteBufferCursor
     {
-        internal byte[] buffer_;
-        internal int start_;
-        internal int end_; // exclusive
+        internal byte[] buffer;
+        internal int start;
+        internal int end; // exclusive
 
         internal ByteBufferCursor(byte[] buffer, int start, int endExclusive)
         {
-            Contract.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
-            buffer_ = buffer;
-            start_ = start;
-            end_ = endExclusive;
+            Reset(buffer, start, endExclusive);
         }
 
         /// <summary>
@@ -239,10 +240,12 @@ namespace Common
         /// This makes sure that only code that owns the ByteBuffer can do this operation,
         /// which is conceptually internal.
         /// </remarks>
-        internal void Reset(int start, int endExclusive)
+        internal void Reset(byte[] buffer, int start, int endExclusive)
         {
-            start_ = start;
-            end_ = endExclusive;
+            Contract.Assert(0 <= start && start <= endExclusive && endExclusive <= buffer.Length);
+            this.buffer = buffer;
+            this.start = start;
+            end = endExclusive;
         }
 
         /// <summary>
@@ -250,7 +253,7 @@ namespace Common
         /// </summary>
         public int Count
         {
-            get { return end_ - start_; }
+            get { return end - start; }
         }
     }
 
@@ -267,20 +270,20 @@ namespace Common
         public void MoveForward(int startShift)
         {
             Contract.Requires(startShift >= 0);
-            start_ += startShift;
+            start += startShift;
         }
 
         public byte NextChar
         {
-            get { return buffer_[start_++]; }
+            get { return buffer[start++]; }
         }
 
         public byte this[int index]
         {
             get
             {
-                Contract.Requires(index >= 0 && start_ + index < end_);
-                return buffer_[start_ + index];
+                Contract.Requires(index >= 0 && start + index < end);
+                return buffer[start + index];
             }
         }
     }
@@ -298,20 +301,20 @@ namespace Common
         public void MoveForward(int startShift)
         {
             Contract.Requires(startShift >= 0);
-            start_ += startShift;
+            start += startShift;
         }
 
         public byte NextChar
         {
-            set { buffer_[start_++] = value; }
+            set { buffer[start++] = value; }
         }
 
         public byte this[int index]
         {
             set
             {
-                Contract.Requires(index >= 0 && start_ + index < end_);
-                buffer_[start_ + index] = value;
+                Contract.Requires(index >= 0 && start + index < end);
+                buffer[start + index] = value;
             }
         }
     }
