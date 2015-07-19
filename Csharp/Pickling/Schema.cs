@@ -27,6 +27,15 @@ namespace Pickling
         /// </summary>
         public static readonly Schema<long> Long = new LongSchema();
 
+        /// <summary>
+        /// Create a schema component for a string
+        /// </summary>
+        /// <returns></returns>
+        public static Schema<string> String()
+        {
+            return new StringSchema();
+        }
+
         #endregion
 
         #region Tuples

@@ -52,6 +52,40 @@ namespace Pickling.Test
             Assert.AreEqual(123, check);
         }
 
+        [TestMethod]
+        public void TestPiclingString()
+        {
+            var schema = Pickling.Schema.String();
+
+            var index = new InMemoryByteContainer();
+            var data = new InMemoryByteContainer();
+
+            var table = Table.Create(schema, index, data);
+            const string example = "Hello, World!";
+
+            table.Write(0, example);
+            var check = table.Read(0);
+            Assert.AreEqual(example, check);
+        }
+
+        [TestMethod]
+        public void TestPiclingArray1()
+        {
+            var schema = Pickling.Schema.Array(Pickling.Schema.Int);
+
+            var index = new InMemoryByteContainer();
+            var data = new InMemoryByteContainer();
+
+            var table = Table.Create(schema, index, data);
+            var example = new int[] { 1, 2, 3, 4 };
+
+            table.Write(0, example);
+            var check = table.Read(0);
+            Assert.AreEqual(example.Length, check.Length);
+            for (int i = 0; i < example.Length; ++i)
+                Assert.AreEqual(check[i], example[i]);
+        }
+
         #endregion
     }
 }

@@ -73,7 +73,7 @@ namespace Pickling
                 innerSchema.Write(segment, element[i]);
             }
 
-            Encoding.WriteArrayStartIndicator(segment);
+            Encoding.WriteArrayEndIndicator(segment);
         }
     }
 
