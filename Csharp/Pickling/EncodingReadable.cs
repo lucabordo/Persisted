@@ -111,7 +111,7 @@ namespace Pickling
 
             for (long v = negative ? value : -value; v != 0; v /= 10)
             {
-                converter = new Converter16(ToChar(-(v % 10)));
+                converter.AsChar = ToChar(-(v % 10));
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
@@ -120,12 +120,12 @@ namespace Pickling
 
             if (negative)
             {
-                converter = new Converter16('-');
+                converter.AsChar = '-';
                 target[--byteId] = converter.Byte1;
                 target[--byteId] = converter.Byte0;
             }
 
-            converter = new Converter16(' ');
+            converter.AsChar = ' ';
             while (byteId != 0)
             {
                 target[--byteId] = converter.Byte1;
@@ -210,9 +210,9 @@ namespace Pickling
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static char ReadChar(ByteBufferReadCursor source)
         {
+            var byte0 = source.NextChar;
             var byte1 = source.NextChar;
-            var byte2 = source.NextChar;
-            var converter = new Converter16(byte1, byte2);
+            var converter = new Converter16(byte0, byte1);
             return converter.AsChar;
         }
 
@@ -415,10 +415,10 @@ namespace Pickling
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SkipObjectSeparator(ByteBufferReadCursor source)
         {
+            char c0 = (char)source.NextChar;
             char c1 = (char)source.NextChar;
-            char c2 = (char)source.NextChar;
 
-            if (c1 != '\r' || c2 != '\n')
+            if (c0 != '\r' || c1 != '\n')
                 throw new Exception();
         }
 
