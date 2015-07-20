@@ -59,9 +59,9 @@
       <Project>{02f10aa4-843d-40a8-bab8-74c0f6c16539}</Project>
       <Name>Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Pickling\Pickling.csproj">
+    <ProjectReference Include="..\Pickling\Pickling.Portable.csproj">
       <Project>{a2b99328-f3e9-406e-8d67-de6985beb216}</Project>
-      <Name>Pickling</Name>
+      <Name>Pickling.Portable</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>
