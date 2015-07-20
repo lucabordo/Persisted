@@ -1,7 +1,9 @@
 ﻿using Common;
 using System;
-using System.Diagnostics;
-using System.Diagnostics.Contracts;
+
+#if USE_REFLECTION_EMIT
+    using System.Reflection.Emit;
+#endif
 
 namespace Pickling
 {
@@ -134,5 +136,27 @@ namespace Pickling
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
         internal abstract void Write(ByteBufferWriteCursor segment, T element);
+
+        #if USE_REFLECTION_EMIT
+
+        /// <summary>
+        /// Emit the bytecode to read an object of type <typeparamref name="T"/>
+        /// This should fill-in the Read method of a compiled object that is itself a Schema <typeparamref name="T"/>
+        /// </summary>
+        internal virtual void CompileReadMethod(ILGenerator generator)
+        {
+            // Will be abstract
+        }
+
+        /// <summary>
+        /// Emit the bytecode to write an object of type <typeparamref name="T"/>
+        /// This should fill-in the Write method of a compiled object that is itself a Schema<typeparamref name="T"/>
+        /// </summary>
+        internal virtual void CompileWriteMethod(ILGenerator generator)
+        {
+            // Will be abstract 
+        }
+
+        #endif
     }
 }
