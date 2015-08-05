@@ -1,7 +1,9 @@
 ﻿using Common;
 using System;
-using System.Diagnostics;
-using System.Diagnostics.Contracts;
+
+#if USE_REFLECTION_EMIT
+    using System.Reflection.Emit;
+#endif
 
 namespace Pickling
 {
@@ -26,6 +28,15 @@ namespace Pickling
         /// Create a schema component for a 64-bit signed integer
         /// </summary>
         public static readonly Schema<long> Long = new LongSchema();
+
+        /// <summary>
+        /// Create a schema component for a string
+        /// </summary>
+        /// <returns></returns>
+        public static Schema<string> String()
+        {
+            return new StringSchema();
+        }
 
         #endregion
 
@@ -106,47 +117,46 @@ namespace Pickling
     /// </summary>
     public abstract class Schema<T>
     {
-        #region Abstract Properties and methods 
-
         /// <summary>
-        /// Number of bytes of fixed-size storage used by any element
+        /// True if the result of <code>GetDynamicSize(x)</code> is independent of <value>x</value>
         /// </summary>
-        internal abstract int GetFixedSize();
+        internal abstract bool IsFixedSize { get; }
 
         /// <summary>
-        /// Number of bytes of dynamic-size storage used by a specific element
+        /// Number of bytes of storage used by a specific element
         /// </summary>
         internal abstract int GetDynamicSize(T element);
 
         /// <summary>
         /// Extract an element of the corresponding type from a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract T Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage);
+        internal abstract T Read(ByteBufferReadCursor segment);
 
         /// <summary>
         /// Insert an element of the corresponding type into a storage composed of a fixed and a dynamic part
         /// </summary>
-        internal abstract void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element);
+        internal abstract void Write(ByteBufferWriteCursor segment, T element);
 
-        #endregion
+        #if USE_REFLECTION_EMIT
 
-        #region Contracts
-
-        [Conditional("DEBUG")]
-        protected void CheckReadPreconditions(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        /// <summary>
+        /// Emit the bytecode to read an object of type <typeparamref name="T"/>
+        /// This should fill-in the Read method of a compiled object that is itself a Schema <typeparamref name="T"/>
+        /// </summary>
+        internal virtual void CompileReadMethod(ILGenerator generator)
         {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());;
-            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
+            // Will be abstract
         }
 
-        [Conditional("DEBUG")]
-        protected void CheckWritePreconditions(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, T element)
+        /// <summary>
+        /// Emit the bytecode to write an object of type <typeparamref name="T"/>
+        /// This should fill-in the Write method of a compiled object that is itself a Schema<typeparamref name="T"/>
+        /// </summary>
+        internal virtual void CompileWriteMethod(ILGenerator generator)
         {
-            Contract.Requires(fixedStorage.Count == GetFixedSize());
-            Contract.Requires(dynamicStorage.Count == GetDynamicSize(element));
-            Contract.Requires(fixedStorage.Disjoint(dynamicStorage));
+            // Will be abstract 
         }
 
-        #endregion
+        #endif
     }
 }

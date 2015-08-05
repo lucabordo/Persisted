@@ -1,6 +1,10 @@
 ﻿using System;
 using Common;
 
+#if USE_REFLECTION_EMIT
+    using System.Reflection.Emit;
+#endif
+
 #if USE_READABLE_Encoding
     using Encoding = Pickling.ReadableEncoding;
 #else
@@ -14,26 +18,31 @@ namespace Pickling
     /// </summary>
     internal class ByteSchema : Schema<byte>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForByte;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(byte element)
         {
-            return 0;
+            return Encoding.EncodingSizeForByte;
         }
 
-        internal override byte Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override byte Read(ByteBufferReadCursor segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadByte(fixedStorage);
+            return Encoding.ReadByte(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, byte element)
+        internal override void Write(ByteBufferWriteCursor segment, byte element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteByte(fixedStorage, element);
+            Encoding.WriteByte(segment, element);
+        }
+
+        internal override void CompileReadMethod(ILGenerator generator)
+        {
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadByte", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -42,26 +51,31 @@ namespace Pickling
     /// </summary>
     internal class IntSchema : Schema<int>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForInt;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(int element)
         {
-            return 0;
+            return Encoding.EncodingSizeForInt;
         }
 
-        internal override int Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override int Read(ByteBufferReadCursor segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadInt(fixedStorage);
+            return Encoding.ReadInt(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, int element)
+        internal override void Write(ByteBufferWriteCursor segment, int element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteInt(fixedStorage, element);
+            Encoding.WriteInt(segment, element);
+        }
+
+        internal override void CompileReadMethod(ILGenerator generator)
+        {
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadInt", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -70,26 +84,31 @@ namespace Pickling
     /// </summary>
     internal class LongSchema : Schema<long>
     {
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForLong;
+            get { return true; }
         }
 
         internal override int GetDynamicSize(long element)
         {
-            return 0;
+            return Encoding.EncodingSizeForLong;
         }
 
-        internal override long Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override long Read(ByteBufferReadCursor segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            return Encoding.ReadLong(fixedStorage);
+            return Encoding.ReadLong(segment);
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, long element)
+        internal override void Write(ByteBufferWriteCursor segment, long element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteLong(fixedStorage, element);
+            Encoding.WriteLong(segment, element);
+        }
+
+        internal override void CompileReadMethod(ILGenerator generator)
+        {
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadLong", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -102,28 +121,41 @@ namespace Pickling
         // TODO: schemas are stateful, therefore construct explicitly
         private char[] buffer_ = new char[128];
 
-        internal override int GetFixedSize()
+        internal override bool IsFixedSize
         {
-            return Encoding.EncodingSizeForOffset;
+            get { return false; }
         }
 
         internal override int GetDynamicSize(string element)
         {
-            return Encoding.EncodingSizeForString(element.Length);
+            return 
+                Encoding.EncodingSizeForInt + 
+                Encoding.EncodingSizeForStringStartIndicator +
+                Encoding.EncodingSizeForString(element.Length) + 
+                Encoding.EncodingSizeForStringEndIndicator;
         }
 
-        internal override string Read(ByteSegmentReadView fixedStorage, ByteSegmentReadView dynamicStorage)
+        internal override string Read(ByteBufferReadCursor segment)
         {
-            CheckReadPreconditions(fixedStorage, dynamicStorage);
-            int length = Encoding.ReadInt(fixedStorage);
-            return Encoding.ReadString(dynamicStorage, length, ref buffer_);
+            int length = Encoding.ReadInt(segment);
+            Encoding.SkipStringStartIndicator(segment);
+            var result = Encoding.ReadString(segment, length, ref buffer_);
+            Encoding.SkipStringEndIndicator(segment);
+            return result;
         }
 
-        internal override void Write(ByteSegmentWriteView fixedStorage, ByteSegmentWriteView dynamicStorage, string element)
+        internal override void Write(ByteBufferWriteCursor segment, string element)
         {
-            CheckWritePreconditions(fixedStorage, dynamicStorage, element);
-            Encoding.WriteInt(fixedStorage, element.Length);
-            Encoding.WriteString(dynamicStorage, element);
+            Encoding.WriteInt(segment, element.Length);
+            Encoding.WriteStringStartIndicator(segment);
+            Encoding.WriteString(segment, element);
+            Encoding.WriteStringEndIndicator(segment);
+        }
+
+        internal override void CompileReadMethod(ILGenerator generator)
+        {
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadString", new Type[] { typeof(ByteBufferReadCursor) }));
         }
     }
 }

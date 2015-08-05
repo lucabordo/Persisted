@@ -18,20 +18,28 @@ namespace Common
             size_ = 0;
         }
 
-        public override void Read(ByteSegmentReadView segment, long index)
+        /// <summary>
+        /// Load into a segment the bytes contained at positions (index + segment.Count)
+        /// </summary>
+        public override void Load(ByteBufferBlockWriter segment, long index)
         {
             if (index + segment.Count > size_)
                 throw new IndexOutOfRangeException();
-            segment.Read(0, storage_, (int)index, segment.Count);
+            segment.Write(0, storage_, (int)index, segment.Count);
         }
 
-        public override void Write(ByteSegmentWriteView segment, long index)
+        /// <summary>
+        /// Store the bytes from a segment into the storage at positions index to (index + segment.Count);
+        /// The container may be extended if needed, but preserving contiguity.
+        /// </summary>
+        public override void Store(ByteBufferBlockReader segment, long index)
         {
             if (index > size_)
                 throw new IndexOutOfRangeException();
-            while (storage_.Length > segment.Count + index)
-                Array.Resize(ref storage_, (int)size_ * 2);
-            segment.Write(0, storage_, (int)index, segment.Count);
+            while (storage_.Length < segment.Count + index)
+                Array.Resize(ref storage_, storage_.Length * 2);
+
+            segment.Read(0, storage_, (int)index, segment.Count);
             size_ = Math.Max(size_, segment.Count + index);
         }
 
