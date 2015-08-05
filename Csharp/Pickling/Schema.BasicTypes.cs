@@ -42,6 +42,7 @@ namespace Pickling
         {
             generator.Emit(OpCodes.Ldarg_1);
             generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadByte", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -74,6 +75,7 @@ namespace Pickling
         {
             generator.Emit(OpCodes.Ldarg_1);
             generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadInt", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -106,6 +108,7 @@ namespace Pickling
         {
             generator.Emit(OpCodes.Ldarg_1);
             generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadLong", new Type[] { typeof(ByteBufferReadCursor) }));
+            generator.Emit(OpCodes.Ret);
         }
     }
 

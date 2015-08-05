@@ -187,7 +187,10 @@ namespace Pickling
             data.Load(BufferLoader, start);
 
             // Decode segment
-            return schema.Read(BufferReader);
+            if (compiledSchema != null)
+                return compiledSchema.Read(BufferReader);
+            else
+                return schema.Read(BufferReader);
         }
 
         private void WriteData(long start, T element, int size)
@@ -271,14 +274,16 @@ namespace Pickling
 
         private void CompileReadMethod(TypeBuilder typeBuilder)
         {
+            var peek1 = typeof(T);
             var methodBuilder = typeBuilder.DefineMethod(
                 "Read",
                 MethodAttributes.Public | MethodAttributes.Virtual,
-                typeof(Schema<T>),
+                typeof(T),
                 new Type[] { typeof(ByteBufferReadCursor) });
 
             var generator = methodBuilder.GetILGenerator();
             schema.CompileReadMethod(generator);
+            var toto = methodBuilder.Signature;
         }
 
         private Tuple<int, byte> SomeInterestingIL(ByteBufferReadCursor typeBuilder)
@@ -288,7 +293,7 @@ namespace Pickling
                 Encoding.ReadByte(typeBuilder));
         }
 
-        private void CompileSchema()
+        public void CompileSchema()
         {
             var assemblyBuilder = Thread.GetDomain().DefineDynamicAssembly(
                 new AssemblyName("Persisted.Collections.EmittedTypes"),

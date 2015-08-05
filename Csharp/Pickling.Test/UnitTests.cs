@@ -40,16 +40,21 @@ namespace Pickling.Test
         [TestMethod]
         public void TestPiclingLong1()
         {
-            var schema = Pickling.Schema.Long;
+            foreach (bool compile in new bool[] { false, true })
+            {
+                var schema = Pickling.Schema.Long;
 
-            var index = new InMemoryByteContainer();
-            var data = new InMemoryByteContainer();
+                var index = new InMemoryByteContainer();
+                var data = new InMemoryByteContainer();
 
-            var table = Table.Create(schema, index, data);
+                var table = Table.Create(schema, index, data);
+                if (compile)
+                    table.CompileSchema();
 
-            table.Write(0, 123);
-            var check = table.Read(0);
-            Assert.AreEqual(123, check);
+                table.Write(0, 123);
+                var check = table.Read(0);
+                Assert.AreEqual(123, check);
+            }
         }
 
         [TestMethod]
