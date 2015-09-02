@@ -187,10 +187,7 @@ namespace Pickling
             data.Load(BufferLoader, start);
 
             // Decode segment
-            if (compiledSchema != null)
-                return compiledSchema.Read(BufferReader);
-            else
-                return schema.Read(BufferReader);
+            return schema.Read(BufferReader);
         }
 
         private void WriteData(long start, T element, int size)
@@ -263,55 +260,6 @@ namespace Pickling
             // TODO: Some assertions here!!
 
             // TODO: Keep track of fragmentation. This would require an index read before write...
-        }
-
-        #endregion
-
-        #region Experiments with Reflection.Emit. This will move
-        
-        // The goal is to produce this: 
-        private ICompiledSchema<T> compiledSchema;
-
-        private void CompileReadMethod(TypeBuilder typeBuilder)
-        {
-            var peek1 = typeof(T);
-            var methodBuilder = typeBuilder.DefineMethod(
-                "Read",
-                MethodAttributes.Public | MethodAttributes.Virtual,
-                typeof(T),
-                new Type[] { typeof(ByteBufferReadCursor) });
-
-            var generator = methodBuilder.GetILGenerator();
-            schema.CompileReadMethod(generator);
-            var toto = methodBuilder.Signature;
-        }
-
-        private Tuple<int, byte> SomeInterestingIL(ByteBufferReadCursor typeBuilder)
-        {
-            return new Tuple<int, byte>(
-                Encoding.ReadInt(typeBuilder),
-                Encoding.ReadByte(typeBuilder));
-        }
-
-        public void CompileSchema()
-        {
-            var assemblyBuilder = Thread.GetDomain().DefineDynamicAssembly(
-                new AssemblyName("Persisted.Collections.EmittedTypes"),
-                AssemblyBuilderAccess.Run);
-
-            var moduleBuilder = assemblyBuilder.DefineDynamicModule("EmittedSchemas");
-
-            var typeBuilder =  moduleBuilder.DefineType(
-                "CompiledSchema", 
-                TypeAttributes.Public);
-            typeBuilder.AddInterfaceImplementation(typeof(ICompiledSchema<T>));
-
-            // Read method 
-            CompileReadMethod(typeBuilder);
-
-            // Create the type, 
-            var theType = typeBuilder.CreateType();
-            compiledSchema = (ICompiledSchema<T>)Activator.CreateInstance(theType);
         }
 
         #endregion

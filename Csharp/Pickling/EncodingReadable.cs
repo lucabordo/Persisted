@@ -5,6 +5,115 @@ using System.Runtime.CompilerServices;
 
 namespace Pickling
 {
+    public interface IEncoding
+    {
+        int EncodingSizeForByte { get; }
+        int EncodingSizeForInt { get; }
+        int EncodingSizeForLong { get; }
+
+        long ReadIntegralType(ByteBufferReadCursor source, int digits);
+        void WriteIntegralType(ByteBufferWriteCursor target, long value, int digits);
+
+        /// <summary>
+        /// Size for encoding a string in dynamic storage
+        /// </summary>
+        int EncodingSizeForString(int stringLength);
+
+        string ReadString(ByteBufferReadCursor source, int length, ref char[] charBuffer);
+
+        void WriteString(ByteBufferWriteCursor writer, string value);
+
+        char ReadChar(ByteBufferReadCursor source);
+        void WriteChar(ByteBufferWriteCursor writer, char c);
+
+        // separators may not require writing a char at all. Just a bool function? 
+        char ReadSeparator(ByteBufferReadCursor source);
+        void WriteSeparator(ByteBufferWriteCursor writer, char c);
+    }
+
+    public static class Examples
+    {
+        public static void DoSomething<ConcreteEncodingType>(ConcreteEncodingType encoding)
+            where ConcreteEncodingType : struct, IEncoding
+        {
+
+        }
+    }
+
+
+    public class ReadableEncodingStatic : IEncoding
+    {
+        public int EncodingSizeForByte
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public int EncodingSizeForInt
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public int EncodingSizeForLong
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public int EncodingSizeForString(int stringLength)
+        {
+            throw new NotImplementedException();
+        }
+
+        public char ReadChar(ByteBufferReadCursor source)
+        {
+            throw new NotImplementedException();
+        }
+
+        public long ReadIntegralType(ByteBufferReadCursor source, int digits)
+        {
+            throw new NotImplementedException();
+        }
+
+        public char ReadSeparator(ByteBufferReadCursor source)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string ReadString(ByteBufferReadCursor source, int length, ref char[] charBuffer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void WriteChar(ByteBufferWriteCursor writer, char c)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void WriteIntegralType(ByteBufferWriteCursor target, long value, int digits)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void WriteSeparator(ByteBufferWriteCursor writer, char c)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void WriteString(ByteBufferWriteCursor writer, string value)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
     /// <summary>
     /// Low-level methods that define how numerical and basic types and encoded into bytes.
     /// </summary>

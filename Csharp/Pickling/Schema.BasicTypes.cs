@@ -37,13 +37,6 @@ namespace Pickling
         {
             Encoding.WriteByte(segment, element);
         }
-
-        internal override void CompileReadMethod(ILGenerator generator)
-        {
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadByte", new Type[] { typeof(ByteBufferReadCursor) }));
-            generator.Emit(OpCodes.Ret);
-        }
     }
 
     /// <summary>
@@ -70,13 +63,6 @@ namespace Pickling
         {
             Encoding.WriteInt(segment, element);
         }
-
-        internal override void CompileReadMethod(ILGenerator generator)
-        {
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadInt", new Type[] { typeof(ByteBufferReadCursor) }));
-            generator.Emit(OpCodes.Ret);
-        }
     }
 
     /// <summary>
@@ -102,13 +88,6 @@ namespace Pickling
         internal override void Write(ByteBufferWriteCursor segment, long element)
         {
             Encoding.WriteLong(segment, element);
-        }
-
-        internal override void CompileReadMethod(ILGenerator generator)
-        {
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadLong", new Type[] { typeof(ByteBufferReadCursor) }));
-            generator.Emit(OpCodes.Ret);
         }
     }
 
@@ -150,12 +129,6 @@ namespace Pickling
             Encoding.WriteStringStartIndicator(segment);
             Encoding.WriteString(segment, element);
             Encoding.WriteStringEndIndicator(segment);
-        }
-
-        internal override void CompileReadMethod(ILGenerator generator)
-        {
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Call, typeof(Encoding).GetMethod("ReadString", new Type[] { typeof(ByteBufferReadCursor) }));
         }
     }
 }
