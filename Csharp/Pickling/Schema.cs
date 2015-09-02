@@ -1,10 +1,6 @@
 ﻿using Common;
 using System;
 
-#if USE_REFLECTION_EMIT
-    using System.Reflection.Emit;
-#endif
-
 namespace Pickling
 {
     /// <summary>

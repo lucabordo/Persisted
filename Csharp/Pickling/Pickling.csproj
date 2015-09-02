@@ -40,7 +40,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ByteCode.cs" />
     <Compile Include="EncodingReadable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Schema.BasicTypes.cs" />

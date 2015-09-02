@@ -1,15 +1,7 @@
 ﻿using System;
 using Common;
 
-#if USE_REFLECTION_EMIT
-    using System.Reflection.Emit;
-#endif
-
-#if USE_READABLE_Encoding
-    using Encoding = Pickling.ReadableEncoding;
-#else
-    using Encoding = Pickling.ReadableEncoding;
-#endif
+using Encoding = Pickling.ReadableEncoding;
 
 namespace Pickling
 {

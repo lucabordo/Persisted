@@ -2,11 +2,7 @@
 using Common;
 using System.Diagnostics.Contracts;
 
-#if USE_READABLE_Encoding
-    using Encoding = Pickling.ReadableEncoding;
-#else
-    using Encoding = Pickling.ReadableEncoding;
-#endif
+using Encoding = Pickling.ReadableEncoding;
 
 namespace Pickling
 {
